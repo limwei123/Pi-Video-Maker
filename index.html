@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pi Video Maker — E‑commerce</title>
+  <!-- Tailwind (CDN) for quick styling; swap to compiled CSS in production -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Safe text zones for 9:16 */
+    .safe-area { outline: 2px dashed rgba(255,255,255,.25); outline-offset: -20px; }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-50">
+  <div class="max-w-5xl mx-auto p-4 md:p-8">
+    <header class="flex items-center justify-between gap-4 mb-6">
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Pi Video Maker — E‑commerce</h1>
+      <a href="#" class="text-xs md:text-sm opacity-80 hover:opacity-100">MVP • client‑side render (WASM)</a>
+    </header>
+
+    <!-- Controls -->
+    <section class="grid md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-neutral-900/60 rounded-2xl p-4 space-y-3">
+        <h2 class="font-bold">1) Upload</h2>
+        <input id="files" type="file" accept="image/*" multiple class="block w-full text-sm" />
+        <div id="thumbs" class="grid grid-cols-4 gap-2"></div>
+      </div>
+
+      <div class="bg-neutral-900/60 rounded-2xl p-4 space-y-3">
+        <h2 class="font-bold">2) Product Details</h2>
+        <label class="block text-sm">Title
+          <input id="titleInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="CAT Watch — New Arrival" />
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="block text-sm">Price
+            <input id="priceInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="RM360" />
+          </label>
+          <label class="block text-sm">Voucher
+            <input id="voucherInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="EXTRA15" />
+          </label>
+        </div>
+        <label class="block text-sm">CTA
+          <input id="ctaInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="Shop Now" />
+        </label>
+        <label class="block text-sm">Aspect Ratio
+          <select id="ratio" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800">
+            <option value="9:16" selected>9:16 (TikTok/Reels)</option>
+            <option value="1:1">1:1 (Square)</option>
+            <option value="16:9">16:9 (YouTube)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="bg-neutral-900/60 rounded-2xl p-4 space-y-3">
+        <h2 class="font-bold">3) Actions</h2>
+        <button id="renderBtn" class="w-full py-2 rounded-2xl bg-white text-black font-semibold disabled:opacity-40">Render 720p</button>
+        <button id="downloadBtn" class="w-full py-2 rounded-2xl bg-neutral-700 font-semibold disabled:opacity-40" disabled>Download MP4</button>
+        <p id="status" class="text-xs opacity-80">Ready.</p>
+      </div>
+    </section>
+
+    <!-- Preview Canvas & Output -->
+    <section class="grid md:grid-cols-2 gap-6 items-start">
+      <div class="bg-neutral-900/60 rounded-2xl p-4">
+        <h3 class="font-semibold mb-3">Preview Canvas</h3>
+        <div class="relative mx-auto" id="canvasWrap">
+          <canvas id="canvas" width="1080" height="1920" class="block w-full rounded-xl safe-area bg-neutral-800"></canvas>
+        </div>
+      </div>
+      <div class="bg-neutral-900/60 rounded-2xl p-4 space-y-3">
+        <h3 class="font-semibold">Result</h3>
+        <video id="outVideo" controls playsinline class="w-full rounded-xl"></video>
+        <div>
+          <label class="text-sm inline-flex items-center gap-2"><input id="musicToggle" type="checkbox" class="accent-white" /> Add music (demo tone)</label>
+        </div>
+        <pre id="log" class="text-xs bg-neutral-950/60 rounded-xl p-3 h-48 overflow-auto"></pre>
+      </div>
+    </section>
+  </div>
+
+  <!-- FFmpeg WASM -->
+  <script type="module">
+    import { createFFmpeg, fetchFile } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js';
+
+    const W_BY_ASPECT = {
+      '9:16': { w: 1080, h: 1920 },
+      '1:1':  { w: 1080, h: 1080 },
+      '16:9': { w: 1920, h: 1080 },
+    };
+
+    const ffmpeg = createFFmpeg({ log: true, corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js' });
+
+    const el = (id) => document.getElementById(id);
+    const filesEl = el('files');
+    const thumbsEl = el('thumbs');
+    const canvas = el('canvas');
+    const ctx = canvas.getContext('2d');
+    const renderBtn = el('renderBtn');
+    const downloadBtn = el('downloadBtn');
+    const outVideo = el('outVideo');
+    const logEl = el('log');
+    const statusEl = el('status');
+    const ratioEl = el('ratio');
+
+    const titleInput = el('titleInput');
+    const priceInput = el('priceInput');
+    const voucherInput = el('voucherInput');
+    const ctaInput = el('ctaInput');
+    const musicToggle = el('musicToggle');
+
+    let images = []; // File[]
+
+    filesEl.addEventListener('change', () => {
+      images = Array.from(filesEl.files || []);
+      thumbsEl.innerHTML = '';
+      images.forEach((f, i) => {
+        const url = URL.createObjectURL(f);
+        const a = document.createElement('img');
+        a.src = url; a.className = 'w-full aspect-square object-cover rounded';
+        const wrap = document.createElement('div');
+        wrap.className = 'space-y-1';
+        wrap.appendChild(a);
+        const lbl = document.createElement('div');
+        lbl.className = 'text-[10px] opacity-70 text-center';
+        lbl.textContent = `${i+1}`;
+        wrap.appendChild(lbl);
+        thumbsEl.appendChild(wrap);
+      });
+    });
+
+    function resizeCanvas() {
+      const { w, h } = W_BY_ASPECT[ratioEl.value];
+      canvas.width = w; canvas.height = h;
+      canvas.parentElement.style.maxWidth = ratioEl.value==='9:16' ? '360px' : '480px';
+    }
+    ratioEl.addEventListener('change', resizeCanvas); resizeCanvas();
+
+    function drawFrame(bmp, t, total, overlay) {
+      // Clear
+      ctx.clearRect(0,0,canvas.width, canvas.height);
+      // Draw image centered, letterboxed
+      const scale = Math.min(canvas.width / bmp.width, canvas.height / bmp.height);
+      const w = bmp.width * scale, h = bmp.height * scale;
+      const x = (canvas.width - w)/2, y = (canvas.height - h)/2;
+      ctx.drawImage(bmp, x, y, w, h);
+
+      // Overlay: semi bar
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(40, 60, canvas.width-80, 180);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '800 56px system-ui, -apple-system, Segoe UI, Roboto';
+      if (overlay.title) ctx.fillText(overlay.title, 70, 150);
+      ctx.font = '800 80px system-ui, -apple-system, Segoe UI, Roboto';
+      if (overlay.price) ctx.fillText(overlay.price, 70, 230);
+
+      // CTA in final seconds
+      if (t > total - 2) {
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        const btnW = 440, btnH = 110, bx = canvas.width/2 - btnW/2, by = canvas.height - 240;
+        ctx.fillRect(bx, by, btnW, btnH);
+        ctx.fillStyle = '#000'; ctx.font = '800 54px system-ui, -apple-system, Segoe UI, Roboto';
+        ctx.fillText(overlay.cta || 'Shop Now', bx + 110, by + 70);
+      }
+    }
+
+    function log(s){ logEl.textContent += s + "\n"; logEl.scrollTop = logEl.scrollHeight; }
+
+    async function renderVideo(){
+      try {
+        statusEl.textContent = 'Loading FFmpeg…';
+        if (!ffmpeg.isLoaded()) await ffmpeg.load();
+        statusEl.textContent = 'Preparing frames…';
+
+        if (images.length === 0) throw new Error('Upload at least 1 image');
+
+        const { w, h } = W_BY_ASPECT[ratioEl.value];
+        const FPS = 30; const DURATION_PER = 2.5; // seconds per image
+        const secondsTotal = images.length * DURATION_PER;
+        const totalFrames = Math.floor(secondsTotal * FPS);
+
+        // Preload bitmaps for speed
+        const bitmaps = await Promise.all(images.map(async f => createImageBitmap(await fetchFile(f))));
+
+        // Generate frames
+        for (let i=0;i<totalFrames;i++){
+          const t = i / FPS; // seconds
+          const idx = Math.floor(t / DURATION_PER);
+          const localT = (t % DURATION_PER) / DURATION_PER;
+
+          const curr = bitmaps[Math.min(idx, bitmaps.length-1)];
+          const next = bitmaps[Math.min(idx+1, bitmaps.length-1)];
+
+          // Crossfade in last 20%
+          const fade = 0.2;
+          if (localT < 1 - fade || idx === bitmaps.length-1) {
+            drawFrame(curr, t, secondsTotal, { title: titleInput.value, price: priceInput.value, cta: ctaInput.value });
+          } else {
+            // Draw curr and next with alpha blending
+            ctx.save();
+            // curr
+            let scale = Math.min(canvas.width / curr.width, canvas.height / curr.height);
+            let ww = curr.width * scale, hh = curr.height * scale;
+            let xx = (canvas.width - ww)/2, yy = (canvas.height - hh)/2;
+            ctx.globalAlpha = 1 - (localT - (1 - fade)) / fade;
+            ctx.drawImage(curr, xx, yy, ww, hh);
+            // next
+            scale = Math.min(canvas.width / next.width, canvas.height / next.height);
+            ww = next.width * scale; hh = next.height * scale;
+            xx = (canvas.width - ww)/2; yy = (canvas.height - hh)/2;
+            ctx.globalAlpha = (localT - (1 - fade)) / fade;
+            ctx.drawImage(next, xx, yy, ww, hh);
+            ctx.restore();
+            // overlays
+            drawFrame(curr, t, secondsTotal, { title: titleInput.value, price: priceInput.value, cta: ctaInput.value });
+          }
+
+          // voucher pill
+          if (voucherInput.value) {
+            ctx.fillStyle = 'rgba(201,173,127,0.95)';
+            const padX=16, padY=10; const text = voucherInput.value;
+            ctx.font = '700 36px system-ui, -apple-system, Segoe UI, Roboto';
+            const tw = ctx.measureText(text).width;
+            const bx = 70, by = 270, bw = tw + padX*2, bh = 56;
+            ctx.fillRect(bx, by, bw, bh);
+            ctx.fillStyle = '#000'; ctx.fillText(text, bx + padX, by + 40);
+          }
+
+          const png = canvas.toDataURL('image/png');
+          const frameName = `frame_${String(i).padStart(5,'0')}.png`;
+          ffmpeg.FS('writeFile', frameName, await fetchFile(png));
+
+          if (i % 30 === 0) { statusEl.textContent = `Frames: ${i}/${totalFrames}`; }
+        }
+
+        log('Encoding to MP4…'); statusEl.textContent = 'Encoding…';
+        const vf = `scale=${w}:${h}`;
+        await ffmpeg.run(
+          '-r', '30',
+          '-f', 'image2', '-i', 'frame_%05d.png',
+          '-pix_fmt', 'yuv420p', '-vcodec', 'libx264', '-crf', '23',
+          '-vf', vf,
+          'out.mp4'
+        );
+
+        // Optional music (demo tone)
+        if (musicToggle.checked) {
+          // Generate a 440Hz tone using FFmpeg filter
+          await ffmpeg.run(
+            '-f','lavfi','-t',String(Math.ceil(secondsTotal)),'-i','sine=frequency=440:sample_rate=44100',
+            '-i','out.mp4','-shortest','-c:v','copy','-c:a','aac','-b:a','128k','out_a.mp4'
+          );
+          const dataA = ffmpeg.FS('readFile','out_a.mp4');
+          const urlA = URL.createObjectURL(new Blob([dataA.buffer], { type: 'video/mp4' }));
+          outVideo.src = urlA; downloadBtn.dataset.url = urlA;
+        } else {
+          const data = ffmpeg.FS('readFile','out.mp4');
+          const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+          outVideo.src = url; downloadBtn.dataset.url = url;
+        }
+
+        downloadBtn.disabled = false; statusEl.textContent = 'Done.'; log('Done.');
+      } catch (e) {
+        console.error(e); log(String(e)); statusEl.textContent = 'Error.';
+      }
+    }
+
+    renderBtn.addEventListener('click', renderVideo);
+    downloadBtn.addEventListener('click', () => {
+      const url = downloadBtn.dataset.url; if (!url) return;
+      const a = document.createElement('a'); a.href = url; a.download = 'pi-video-maker.mp4'; a.click();
+    });
+  </script>
+
+  <!-- Pi Platform SDK (placeholder). In Pi Browser, include the official SDK and auth flow. -->
+  <!-- <script src="https://sdk.minepi.com/pi-sdk.js"></script> -->
+</body>
+</html>
