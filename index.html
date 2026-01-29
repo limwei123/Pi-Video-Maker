@@ -19,20 +19,61 @@
 
     <!-- Pi SDK status / auth -->
     <section class="bg-neutral-900/60 rounded-2xl p-4 mb-6">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div class="text-sm">
-          <div id="piStatus">Pi SDK: <span class="opacity-80">loading…</span></div>
-          <div id="piUser" class="opacity-80"></div>
-        </div>
-        <div class="flex gap-2">
-          <button id="piInitBtn" class="px-3 py-2 rounded bg-white text-black font-semibold">Init Sandbox</button>
-          <button id="piAuthBtn" class="px-3 py-2 rounded bg-neutral-200 text-black font-semibold disabled:opacity-40" disabled>Authenticate</button>
-        </div>
-      </div>
-      <p class="text-xs opacity-70 mt-3">
-        Tip: In Pi Browser Sandbox, enter your sandbox code in the Pi app Utilities, then open the Sandbox URL.
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-3xl md:text-4xl font-extrabold">Pi Video Maker — E-commerce</h1>
+      <p class="opacity-70 mt-1">WASM render • Pi Sandbox ready</p>
+    </div>
+
+    <div class="text-right space-y-1">
+      <div class="text-sm opacity-70">Pi SDK: <span id="piSdkState" class="opacity-80">loading…</span></div>
+      <div class="text-sm opacity-70">Mode: <span id="piModeState" class="opacity-80">unknown</span></div>
+    </div>
+  </div>
+
+  <div class="mt-4 grid md:grid-cols-3 gap-3">
+    <div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
+      <div class="text-xs opacity-70">Step 1</div>
+      <div class="font-bold">Init Sandbox</div>
+      <button id="piInitBtn" class="w-full py-2 rounded-2xl bg-white text-black font-extrabold disabled:opacity-40" disabled>
+        Init Sandbox
+      </button>
+      <p class="text-[11px] leading-snug opacity-70">
+        Open this page in <b>Pi Browser Sandbox</b>. Then tap Init.
       </p>
-    </section>
+    </div>
+
+    <div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
+      <div class="text-xs opacity-70">Step 2</div>
+      <div class="font-bold">Sign in</div>
+      <button id="piSignInBtn" class="w-full py-2 rounded-2xl bg-indigo-300 text-black font-extrabold disabled:opacity-40" disabled>
+        Sign in with Pi
+      </button>
+      <div id="piUser" class="text-xs opacity-70">Not signed in</div>
+    </div>
+
+    <div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
+      <div class="text-xs opacity-70">Step 3</div>
+      <div class="font-bold">Pay</div>
+      <label class="block text-sm">Amount (Pi)
+        <input id="piAmountInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="1" value="1" />
+      </label>
+      <button id="piPayBtn" class="w-full py-2 rounded-2xl bg-emerald-300 text-black font-extrabold disabled:opacity-40" disabled>
+        Pay with Pi
+      </button>
+    </div>
+  </div>
+
+  <div class="mt-4 rounded-2xl bg-neutral-950/40 border border-white/10 p-4">
+    <div class="text-xs opacity-70">Status</div>
+    <div id="piStatus" class="text-sm font-semibold">Waiting for Pi SDK…</div>
+    <p class="text-[11px] leading-snug opacity-70 mt-2">
+      Tip: In Pi Browser Sandbox, enter your sandbox code in Pi App → Utilities → Sandbox, then open the Sandbox URL.
+      <br/>
+      Note: This is <b>frontend-only</b> (demo). For real production payment verification, a backend is recommended.
+    </p>
+  </div>
+</section>
 
     <!-- Controls -->
     <section class="grid md:grid-cols-3 gap-6 mb-8">
@@ -71,19 +112,6 @@
         <h2 class="font-bold">3) Actions</h2>
         <button id="renderBtn" class="w-full py-2 rounded-2xl bg-white text-black font-semibold disabled:opacity-40">Render 720p</button>
         <button id="downloadBtn" class="w-full py-2 rounded-2xl bg-neutral-700 font-semibold disabled:opacity-40" disabled>Download MP4</button>
-<!-- Pi Payment (Sandbox) -->
-<div class="mt-2 p-3 rounded-2xl bg-neutral-950/40 border border-white/10 space-y-2">
-  <div class="text-xs opacity-70">4) Pi Payment (Sandbox)</div>
-  <label class="block text-sm">Amount (Pi)
-    <input id="piAmountInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="1" value="1" />
-  </label>
-  <button id="piPayBtn" class="w-full py-2 rounded-2xl bg-emerald-300 text-black font-extrabold disabled:opacity-40" disabled>
-    Pay with Pi (Sandbox)
-  </button>
-  <p class="text-[11px] leading-snug opacity-70">
-    Note: This button opens the Pi payment flow. To <b>approve/complete</b> payments safely, you still need a backend endpoint.
-  </p>
-</div>
         <p id="status" class="text-xs opacity-80">Ready.</p>
       </div>
     </section>
@@ -290,13 +318,21 @@
     const piStatus = document.getElementById('piStatus');
     const piUser = document.getElementById('piUser');
     const piInitBtn = document.getElementById('piInitBtn');
-    const piAuthBtn = document.getElementById('piAuthBtn');
-
-
+const piSignInBtn = document.getElementById('piSignInBtn');
 const piPayBtn = document.getElementById('piPayBtn');
 const piAmountInput = document.getElementById('piAmountInput');
 
+const piSdkState = document.getElementById('piSdkState');
+const piModeState = document.getElementById('piModeState');
+const piStatus = document.getElementById('piStatus');
+const piUser = document.getElementById('piUser');
+
+let piReady = false;
+let piSignedIn = false;
 let piAuthUser = null;
+
+function setStatus(msg){ if (piStatus) piStatus.textContent = msg; }
+function setUser(msg){ if (piUser) piUser.textContent = msg; }
 
 function parsePiAmount(raw){
   const s = String(raw || '').trim();
@@ -305,133 +341,134 @@ function parsePiAmount(raw){
   return n;
 }
 
-async function callBackend(path, payload){
-  // Optional backend endpoints. If you don't have them yet, the UI will show a clear error.
-  const res = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload || {})
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(()=> '');
-    throw new Error(`Backend ${path} failed: ${res.status} ${t}`);
-  }
-  return res.json().catch(()=> ({}));
-}
-
-    function setStatus(msg){ piStatus.innerHTML = 'Pi SDK: <span class="opacity-80">' + msg + '</span>'; }
-
-    // Load Pi SDK if available (works in Pi Browser)
-    const piScript = document.createElement('script');
-    piScript.src = 'https://sdk.minepi.com/pi-sdk.js';
-    piScript.async = true;
-    piScript.onload = () => { setStatus(window.Pi ? 'loaded' : 'not available'); if (window.Pi) piInitBtn.disabled = false; };
-    piScript.onerror = () => setStatus('failed to load');
-    document.head.appendChild(piScript);
-
-    piInitBtn.addEventListener('click', () => {
-      if (!window.Pi) return setStatus('not available');
-      window.Pi.init({ sandbox: true });
-      setStatus('initialized (sandbox=true)');
-      piAuthBtn.disabled = false;
-    });
-
-    piAuthBtn.addEventListener('click', async () => {
-      if (!window.Pi) return;
-      try {
-        const scopes = ['payments']; // minimal scope
-        const user = await window.Pi.authenticate(scopes, onIncompletePaymentFound);
-        piUser.textContent = 'Logged in as: ' + (user?.user?.username || 'unknown');
-
-piAuthUser = user;
-if (piPayBtn) piPayBtn.disabled = false;
-      } catch (e) {
-        piUser.textContent = 'Auth error: ' + e;
-      }
-    });
-
-    
-async function startPiPayment(){
-  if (!window.Pi) return;
-  if (!piAuthUser) {
-    piUser.textContent = 'Please Authenticate first.';
-    return;
-  }
-  const amount = parsePiAmount(piAmountInput?.value);
-  if (!amount) {
-    piUser.textContent = 'Invalid Pi amount. Example: 1 or 0.5';
-    return;
-  }
-
-  const title = (titleInput.value || 'Digital Product').slice(0, 64);
-  const memo = `Pi Video Maker: ${title}`;
-  const metadata = {
-    title: titleInput.value || '',
-    priceLabel: priceInput.value || '',
-    voucher: voucherInput.value || '',
-    cta: ctaInput.value || '',
-    ts: Date.now()
-  };
-
-  try {
-    // This opens the Pi payment UI (Sandbox).
-    const payment = await window.Pi.createPayment({
-      amount,
-      memo,
-      metadata
-    }, {
-      onReadyForServerApproval: async (paymentId) => {
-        log(`Pi payment ready for server approval: ${paymentId}`);
-        statusEl.textContent = 'Payment created. Waiting server approval…';
-        try {
-          await callBackend('/api/pi/approve', { paymentId });
-          log('Server approval OK.');
-          statusEl.textContent = 'Approved. Waiting completion…';
-        } catch (e) {
-          log(String(e));
-          statusEl.textContent = 'Backend not set: approval failed.';
-        }
-      },
-      onReadyForServerCompletion: async (paymentId, txid) => {
-        log(`Pi payment ready for completion: ${paymentId} txid=${txid || ''}`);
-        try {
-          await callBackend('/api/pi/complete', { paymentId, txid });
-          log('Server completion OK.');
-          statusEl.textContent = 'Payment completed ✅';
-        } catch (e) {
-          log(String(e));
-          statusEl.textContent = 'Backend not set: completion failed.';
-        }
-      },
-      onCancel: async (paymentId) => {
-        log(`Pi payment cancelled: ${paymentId}`);
-        statusEl.textContent = 'Payment cancelled.';
-        try { await callBackend('/api/pi/cancel', { paymentId }); } catch(e){ /* ignore */ }
-      },
-      onError: (error, payment) => {
-        console.error(error, payment);
-        log(`Pi payment error: ${String(error)}`);
-        statusEl.textContent = 'Payment error.';
-      }
-    });
-
-    log(`Pi.createPayment returned: ${JSON.stringify(payment || {})}`);
-  } catch (e) {
-    log(`Pi.createPayment failed: ${String(e)}`);
-    statusEl.textContent = 'Payment failed to start.';
-  }
-}
-
-if (piPayBtn) {
-  piPayBtn.addEventListener('click', startPiPayment);
+function refreshButtons(){
+  if (piInitBtn) piInitBtn.disabled = !piReady;
+  if (piSignInBtn) piSignInBtn.disabled = !piReady;
+  if (piPayBtn) piPayBtn.disabled = !(piReady && piSignedIn);
 }
 
 function onIncompletePaymentFound(payment) {
-  console.log('incomplete payment', payment);
-  log('Found incomplete payment: ' + JSON.stringify(payment || {}));
-  statusEl.textContent = 'Incomplete payment found (see log).';
+  console.log('incomplete payment found', payment);
+  setStatus('Found an incomplete payment (check console).');
 }
-  </script>
+
+function waitForPiSdk(timeoutMs = 12000){
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const t = setInterval(() => {
+      if (window.Pi) { clearInterval(t); resolve(window.Pi); return; }
+      if (Date.now() - start > timeoutMs) { clearInterval(t); reject(new Error('Pi SDK not found')); }
+    }, 150);
+  });
+}
+
+(async () => {
+  try {
+    await waitForPiSdk();
+    piReady = true;
+    if (piSdkState) piSdkState.textContent = 'ready';
+    setStatus('Pi SDK loaded. Tap “Init Sandbox”.');
+    refreshButtons();
+  } catch (e) {
+    if (piSdkState) piSdkState.textContent = 'not detected';
+    setStatus('Open this page inside Pi Browser (or Pi Sandbox).');
+    refreshButtons();
+  }
+})();
+
+if (piInitBtn) {
+  piInitBtn.addEventListener('click', () => {
+    if (!window.Pi) return;
+    try {
+      window.Pi.init({ sandbox: true });
+      if (piModeState) piModeState.textContent = 'Sandbox';
+      setStatus('Sandbox initialized. Tap “Sign in with Pi”.');
+    } catch (e) {
+      console.error(e);
+      setStatus('Init failed. Please open in Pi Browser Sandbox.');
+    }
+  });
+}
+
+if (piSignInBtn) {
+  piSignInBtn.addEventListener('click', async () => {
+    if (!window.Pi) return;
+    try {
+      setStatus('Signing in…');
+      const user = await window.Pi.authenticate(['payments'], onIncompletePaymentFound);
+      piAuthUser = user;
+      piSignedIn = true;
+      const username = user?.user?.username || user?.username || 'unknown';
+      setUser('Signed in as: ' + username);
+      setStatus('Signed in ✅ You can now pay.');
+      refreshButtons();
+    } catch (e) {
+      console.error(e);
+      setStatus('Sign-in cancelled or failed.');
+      setUser('Not signed in');
+      piSignedIn = false;
+      refreshButtons();
+    }
+  });
+}
+
+if (piPayBtn) {
+  piPayBtn.addEventListener('click', async () => {
+    if (!window.Pi) return;
+    if (!piSignedIn) { setStatus('Please sign in first.'); return; }
+
+    const amount = parsePiAmount(piAmountInput?.value);
+    if (!amount) { setStatus('Invalid amount. Example: 1 or 0.5'); return; }
+
+    // Use your existing product fields as memo/metadata if present
+    const titleEl = document.getElementById('titleInput');
+    const priceEl = document.getElementById('priceInput');
+    const voucherEl = document.getElementById('voucherInput');
+    const ctaEl = document.getElementById('ctaInput');
+
+    const title = (titleEl?.value || 'Digital Product').slice(0, 64);
+    const memo = `Pi Video Maker: ${title}`;
+    const metadata = {
+      title: titleEl?.value || '',
+      priceLabel: priceEl?.value || '',
+      voucher: voucherEl?.value || '',
+      cta: ctaEl?.value || '',
+      ts: Date.now()
+    };
+
+    try {
+      setStatus('Opening Pi payment…');
+      const payment = await window.Pi.createPayment(
+        { amount, memo, metadata },
+        {
+          onReadyForServerApproval: (paymentId) => {
+            console.log('ready for server approval', paymentId);
+            // Frontend-only demo: we just show the state.
+            setStatus('Payment created. (Frontend-only demo: no server approval)');
+          },
+          onReadyForServerCompletion: (paymentId, txid) => {
+            console.log('ready for server completion', paymentId, txid);
+            setStatus('Payment completed ✅ (Frontend-only demo)');
+          },
+          onCancel: (paymentId) => {
+            console.log('payment cancelled', paymentId);
+            setStatus('Payment cancelled.');
+          },
+          onError: (error, payment) => {
+            console.error('payment error', error, payment);
+            setStatus('Payment error. Check console.');
+          }
+        }
+      );
+      console.log('createPayment returned', payment);
+    } catch (e) {
+      console.error(e);
+      setStatus('Payment failed to start. Ensure you are in Pi Browser Sandbox.');
+    }
+  });
+}
+
+refreshButtons();</script>
 
 </body>
 </html>
