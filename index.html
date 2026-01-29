@@ -1,531 +1,190 @@
-<!-- Pi Domain Validation Key: 1da8716b9e698432641f1fdfddeca03c001e6de5b7fb0f03ed45e969d564ee8165f28f9d462de16eb6ba6b7123b2af556ee45a4d1fd92d9918f015aaefb14f12 -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pi Video Maker — E-commerce (Sandbox-ready)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Pi SDK Minimal Test</title>
   <style>
-    .safe-area { outline: 2px dashed rgba(255,255,255,.25); outline-offset: -20px; }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b0b0f;color:#fff;margin:0;padding:16px}
+    .card{background:#141421;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;margin:12px 0}
+    button{width:100%;padding:12px 14px;border-radius:14px;border:0;font-weight:800}
+    button:disabled{opacity:.45}
+    .primary{background:#fff;color:#000}
+    .indigo{background:#b7b9ff;color:#000}
+    .emerald{background:#8ff0c6;color:#000}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;white-space:pre-wrap;word-break:break-word}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row > button{flex:1;min-width:180px}
+    a{color:#9ad}
   </style>
-  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+  <!-- Pi SDK -->
+  <script>
+    // Load Pi SDK with explicit onload/onerror so we can see what's happening.
+    function log(msg){
+      const el=document.getElementById('log');
+      const ts=new Date().toISOString().slice(11,19);
+      el.textContent += `[${ts}] ${msg}\n`;
+    }
+
+    function injectPiSdk(){
+      log('Injecting Pi SDK script…');
+      // Remove existing tags
+      document.querySelectorAll('script[data-pi-sdk="1"]').forEach(s=>s.remove());
+      const s=document.createElement('script');
+      s.src='https://sdk.minepi.com/pi-sdk.js?v='+Date.now();
+      s.async=true;
+      s.dataset.piSdk="1";
+      s.onload=()=>{ log('Pi SDK script loaded (onload fired).'); onMaybeReady(); };
+      s.onerror=()=>{ log('❌ Pi SDK script failed to load (onerror). Likely CSP/headers/network.'); onMaybeReady(); };
+      document.head.appendChild(s);
+    }
+
+    injectPiSdk();
+  </script>
 </head>
-<body class="bg-neutral-950 text-neutral-50">
-  <div class="max-w-5xl mx-auto p-4 md:p-8">
-    <header class="flex items-center justify-between gap-4 mb-6">
-      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Pi Video Maker — E-commerce</h1>
-      <span class="text-xs md:text-sm opacity-80">WASM render • Pi Sandbox ready</span>
-    </header>
-
-    <!-- Pi SDK status / auth -->
-    <section class="bg-neutral-900/60 rounded-2xl p-4 mb-6">
-  <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-    <div>
-      <h1 class="text-3xl md:text-4xl font-extrabold">Pi Video Maker — E-commerce</h1>
-      <p class="opacity-70 mt-1">WASM render • Pi Sandbox ready</p>
-    </div>
-
-    <div class="text-right space-y-1">
-      <div class="text-sm opacity-70">Pi SDK: <span id="piSdkState" class="opacity-80">loading…</span></div>
-      <div class="text-sm opacity-70">Mode: <span id="piModeState" class="opacity-80">unknown</span></div>
+<body>
+  <h1>Pi SDK Minimal Test</h1>
+  <div class="card">
+    <div><b>Open inside:</b> Pi Browser Sandbox</div>
+    <div style="opacity:.75;margin-top:6px">
+      If this still can't load Pi SDK in sandbox, the issue is not your app UI — it's deployment/headers.
     </div>
   </div>
 
-<div class="mt-3 rounded-2xl bg-neutral-950/40 border border-white/10 p-4">
-  <div class="text-sm font-bold">How to use (2 clicks)</div>
-  <ol class="mt-2 list-decimal list-inside text-sm opacity-80 space-y-1">
-    <li>Open this link inside <b>Pi Browser</b>.</li>
-    <li>Tap <b>Sign in with Pi</b>, then tap <b>Pay with Pi</b>.</li>
-  </ol>
-  <div class="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center">
-    <div class="text-xs opacity-70 break-all">Link: <span id="siteLink"></span></div>
-    <button id="copyLinkBtn" class="sm:ml-auto px-3 py-2 rounded-2xl bg-white text-black font-extrabold">
-      Copy link
-    </button>
-  </div>
-  <div id="copyMsg" class="text-xs opacity-70 mt-1"></div>
-</div>
-
-
-
-  <div class="mt-4 grid md:grid-cols-2 gap-3">
-<div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
-  <div class="text-xs opacity-70">Step 1</div>
-  <div class="font-bold">Sign in</div>
-  <button id="piSignInBtn" class="w-full py-2 rounded-2xl bg-indigo-300 text-black font-extrabold disabled:opacity-40" disabled>
-    Sign in with Pi
-  </button>
-  <div id="piUser" class="text-xs opacity-70">Not signed in</div>
-  <p class="text-[11px] leading-snug opacity-70">
-    Must sign in first before payment.
-  </p>
-</div>
-
-<div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
-  <div class="text-xs opacity-70">Step 2</div>
-  <div class="font-bold">Pay</div>
-  <label class="block text-sm">Amount (Pi)
-    <input id="piAmountInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="1" value="1" />
-  </label>
-  <button id="piPayBtn" class="w-full py-2 rounded-2xl bg-emerald-300 text-black font-extrabold disabled:opacity-40" disabled>
-    Pay with Pi
-  </button>
-  <p class="text-[11px] leading-snug opacity-70">
-    Payment button will unlock after sign-in.
-  </p>
-</div>
-</div>
-
-  <div class="mt-4 rounded-2xl bg-neutral-950/40 border border-white/10 p-4">
-    <div class="text-xs opacity-70">Status</div>
-    <div id="piStatus" class="text-sm font-semibold">Waiting for Pi SDK…</div>
-    <p class="text-[11px] leading-snug opacity-70 mt-2">
-      Tip: Open this page directly inside Pi Browser (Sandbox or Mainnet).
-      <br/>
-      Note: This is <b>frontend-only</b> (demo). For real production payment verification, a backend is recommended.
-    </p>
-  </div>
-</section>
-
-    <!-- Controls -->
-    <section class="grid md:grid-cols-3 gap-6 mb-8">
-      <div class="bg-neutral-900/60 rounded-2xl p-4 space-y-3">
-        <h2 class="font-bold">1) Upload</h2>
-        <input id="files" type="file" accept="image/*" multiple class="block w-full text-sm" />
-        <div id="thumbs" class="grid grid-cols-4 gap-2"></div>
-      </div>
-
-      <div class="bg-neutral-900/60 rounded-2xl p-4 space-y-3">
-        <h2 class="font-bold">2) Product Details</h2>
-        <label class="block text-sm">Title
-          <input id="titleInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="CAT Watch — New Arrival" />
-        </label>
-        <div class="grid grid-cols-2 gap-2">
-          <label class="block text-sm">Price
-            <input id="priceInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="RM360" />
-          </label>
-          <label class="block text-sm">Voucher
-            <input id="voucherInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="EXTRA15" />
-          </label>
-        </div>
-        <label class="block text-sm">CTA
-          <input id="ctaInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="Shop Now" />
-        </label>
-        <label class="block text-sm">Aspect Ratio
-          <select id="ratio" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800">
-            <option value="9:16" selected>9:16 (TikTok/Reels)</option>
-            <option value="1:1">1:1 (Square)</option>
-            <option value="16:9">16:9 (YouTube)</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="bg-neutral-900/60 rounded-2xl p-4 space-y-3">
-        <h2 class="font-bold">3) Actions</h2>
-        <button id="renderBtn" class="w-full py-2 rounded-2xl bg-white text-black font-semibold disabled:opacity-40">Render 720p</button>
-        <button id="downloadBtn" class="w-full py-2 rounded-2xl bg-neutral-700 font-semibold disabled:opacity-40" disabled>Download MP4</button>
-        <p id="status" class="text-xs opacity-80">Ready.</p>
-      </div>
-    </section>
-
-    <!-- Preview Canvas & Output -->
-    <section class="grid md:grid-cols-2 gap-6 items-start">
-      <div class="bg-neutral-900/60 rounded-2xl p-4">
-        <h3 class="font-semibold mb-3">Preview Canvas</h3>
-        <div class="relative mx-auto" id="canvasWrap">
-          <canvas id="canvas" width="1080" height="1920" class="block w-full rounded-xl safe-area bg-neutral-800"></canvas>
-        </div>
-      </div>
-      <div class="bg-neutral-900/60 rounded-2xl p-4 space-y-3">
-        <h3 class="font-semibold">Result</h3>
-        <video id="outVideo" controls playsinline class="w-full rounded-xl"></video>
-        <div>
-          <label class="text-sm inline-flex items-center gap-2"><input id="musicToggle" type="checkbox" class="accent-white" /> Add music (demo tone)</label>
-        </div>
-        <pre id="log" class="text-xs bg-neutral-950/60 rounded-xl p-3 h-48 overflow-auto"></pre>
-      </div>
-    </section>
+  <div class="card">
+    <div><b>Environment</b></div>
+    <div class="mono" id="env"></div>
   </div>
 
-  <!-- FFmpeg WASM -->
-  <script type="module">
-    import { createFFmpeg, fetchFile } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js';
+  <div class="card">
+    <div><b>Status</b></div>
+    <div id="status" style="font-weight:800">Checking…</div>
+    <div style="opacity:.75;margin-top:6px">window.Pi: <span id="piPresent">unknown</span></div>
+    <div style="opacity:.75">Mode: <span id="mode">unknown</span></div>
+  </div>
 
-    const W_BY_ASPECT = {
-      '9:16': { w: 1080, h: 1920 },
-      '1:1':  { w: 1080, h: 1080 },
-      '16:9': { w: 1920, h: 1080 },
-    };
+  <div class="card">
+    <div class="row">
+      <button class="primary" id="reloadBtn">Reload Pi SDK</button>
+      <button class="indigo" id="signInBtn" disabled>Sign in with Pi</button>
+    </div>
+    <button class="emerald" id="payBtn" disabled style="margin-top:10px">Pay with Pi (1 Pi)</button>
+    <div style="opacity:.75;margin-top:8px" id="userLine">Not signed in</div>
+  </div>
 
-    const ffmpeg = createFFmpeg({ log: true, corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js' });
+  <div class="card">
+    <div><b>Log</b></div>
+    <div class="mono" id="log"></div>
+  </div>
 
-    const el = (id) => document.getElementById(id);
-    const filesEl = el('files');
-    const thumbsEl = el('thumbs');
-    const canvas = el('canvas');
-    const ctx = canvas.getContext('2d');
-    const renderBtn = el('renderBtn');
-    const downloadBtn = el('downloadBtn');
-    const outVideo = el('outVideo');
-    const logEl = el('log');
-    const statusEl = el('status');
-    const ratioEl = el('ratio');
+<script>
+  const statusEl = document.getElementById('status');
+  const piPresentEl = document.getElementById('piPresent');
+  const modeEl = document.getElementById('mode');
+  const envEl = document.getElementById('env');
+  const signInBtn = document.getElementById('signInBtn');
+  const payBtn = document.getElementById('payBtn');
+  const userLine = document.getElementById('userLine');
+  const reloadBtn = document.getElementById('reloadBtn');
 
-    const titleInput = el('titleInput');
-    const priceInput = el('priceInput');
-    const voucherInput = el('voucherInput');
-    const ctaInput = el('ctaInput');
-    const musicToggle = el('musicToggle');
+  let signedIn = false;
 
-    let images = []; // File[]
-
-    filesEl.addEventListener('change', () => {
-      images = Array.from(filesEl.files || []);
-      thumbsEl.innerHTML = '';
-      images.forEach((f, i) => {
-        const url = URL.createObjectURL(f);
-        const a = document.createElement('img');
-        a.src = url; a.className = 'w-full aspect-square object-cover rounded';
-        const wrap = document.createElement('div');
-        wrap.className = 'space-y-1';
-        wrap.appendChild(a);
-        const lbl = document.createElement('div');
-        lbl.className = 'text-[10px] opacity-70 text-center';
-        lbl.textContent = `${i+1}`;
-        wrap.appendChild(lbl);
-        thumbsEl.appendChild(wrap);
-      });
-    });
-
-    function resizeCanvas() {
-      const { w, h } = W_BY_ASPECT[ratioEl.value];
-      canvas.width = w; canvas.height = h;
-      canvas.parentElement.style.maxWidth = ratioEl.value==='9:16' ? '360px' : '480px';
-    }
-    ratioEl.addEventListener('change', resizeCanvas); resizeCanvas();
-
-    function drawFrame(bmp, t, total, overlay) {
-      ctx.clearRect(0,0,canvas.width, canvas.height);
-      const scale = Math.min(canvas.width / bmp.width, canvas.height / bmp.height);
-      const w = bmp.width * scale, h = bmp.height * scale;
-      const x = (canvas.width - w)/2, y = (canvas.height - h)/2;
-      ctx.drawImage(bmp, x, y, w, h);
-
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(40, 60, canvas.width-80, 180);
-
-      ctx.fillStyle = '#fff';
-      ctx.font = '800 56px system-ui, -apple-system, Segoe UI, Roboto';
-      if (overlay.title) ctx.fillText(overlay.title, 70, 150);
-      ctx.font = '800 80px system-ui, -apple-system, Segoe UI, Roboto';
-      if (overlay.price) ctx.fillText(overlay.price, 70, 230);
-
-      if (t > total - 2) {
-        ctx.fillStyle = 'rgba(255,255,255,0.95)';
-        const btnW = 440, btnH = 110, bx = canvas.width/2 - btnW/2, by = canvas.height - 240;
-        ctx.fillRect(bx, by, btnW, btnH);
-        ctx.fillStyle = '#000'; ctx.font = '800 54px system-ui, -apple-system, Segoe UI, Roboto';
-        ctx.fillText(overlay.cta || 'Shop Now', bx + 110, by + 70);
-      }
-    }
-
-    function log(s){ logEl.textContent += s + "\\n"; logEl.scrollTop = logEl.scrollHeight; }
-
-    async function renderVideo(){
-      try {
-        statusEl.textContent = 'Loading FFmpeg…';
-        if (!ffmpeg.isLoaded()) await ffmpeg.load();
-        statusEl.textContent = 'Preparing frames…';
-
-        if (images.length === 0) throw new Error('Upload at least 1 image');
-
-        const { w, h } = W_BY_ASPECT[ratioEl.value];
-        const FPS = 30; const DURATION_PER = 2.5;
-        const secondsTotal = images.length * DURATION_PER;
-        const totalFrames = Math.floor(secondsTotal * FPS);
-
-        const bitmaps = await Promise.all(images.map(async f => createImageBitmap(await fetchFile(f))));
-
-        for (let i=0;i<totalFrames;i++){
-          const t = i / FPS;
-          const idx = Math.floor(t / DURATION_PER);
-          const localT = (t % DURATION_PER) / DURATION_PER;
-
-          const curr = bitmaps[Math.min(idx, bitmaps.length-1)];
-          const next = bitmaps[Math.min(idx+1, bitmaps.length-1)];
-
-          const fade = 0.2;
-          if (localT < 1 - fade || idx === bitmaps.length-1) {
-            drawFrame(curr, t, secondsTotal, { title: titleInput.value, price: priceInput.value, cta: ctaInput.value });
-          } else {
-            ctx.save();
-            let scale = Math.min(canvas.width / curr.width, canvas.height / curr.height);
-            let ww = curr.width * scale, hh = curr.height * scale;
-            let xx = (canvas.width - ww)/2, yy = (canvas.height - hh)/2;
-            ctx.globalAlpha = 1 - (localT - (1 - fade)) / fade;
-            ctx.drawImage(curr, xx, yy, ww, hh);
-            scale = Math.min(canvas.width / next.width, canvas.height / next.height);
-            ww = next.width * scale; hh = next.height * scale;
-            xx = (canvas.width - ww)/2; yy = (canvas.height - hh)/2;
-            ctx.globalAlpha = (localT - (1 - fade)) / fade;
-            ctx.drawImage(next, xx, yy, ww, hh);
-            ctx.restore();
-            drawFrame(curr, t, secondsTotal, { title: titleInput.value, price: priceInput.value, cta: ctaInput.value });
-          }
-
-          if (voucherInput.value) {
-            ctx.fillStyle = 'rgba(201,173,127,0.95)';
-            const padX=16; const text = voucherInput.value;
-            ctx.font = '700 36px system-ui, -apple-system, Segoe UI, Roboto';
-            const tw = ctx.measureText(text).width;
-            const bx = 70, by = 270, bw = tw + padX*2, bh = 56;
-            ctx.fillRect(bx, by, bw, bh);
-            ctx.fillStyle = '#000'; ctx.fillText(text, bx + padX, by + 40);
-          }
-
-          const png = canvas.toDataURL('image/png');
-          const frameName = `frame_${String(i).padStart(5,'0')}.png`;
-          ffmpeg.FS('writeFile', frameName, await fetchFile(png));
-
-          if (i % 30 === 0) { statusEl.textContent = `Frames: ${i}/${totalFrames}`; }
-        }
-
-        log('Encoding to MP4…'); statusEl.textContent = 'Encoding…';
-        const vf = `scale=${w}:${h}`;
-        await ffmpeg.run(
-          '-r', '30',
-          '-f', 'image2', '-i', 'frame_%05d.png',
-          '-pix_fmt', 'yuv420p', '-vcodec', 'libx264', '-crf', '23',
-          '-vf', vf,
-          'out.mp4'
-        );
-
-        if (musicToggle.checked) {
-          await ffmpeg.run(
-            '-f','lavfi','-t',String(Math.ceil(secondsTotal)),'-i','sine=frequency=440:sample_rate=44100',
-            '-i','out.mp4','-shortest','-c:v','copy','-c:a','aac','-b:a','128k','out_a.mp4'
-          );
-          const dataA = ffmpeg.FS('readFile','out_a.mp4');
-          const urlA = URL.createObjectURL(new Blob([dataA.buffer], { type: 'video/mp4' }));
-          outVideo.src = urlA; downloadBtn.dataset.url = urlA;
-        } else {
-          const data = ffmpeg.FS('readFile','out.mp4');
-          const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-          outVideo.src = url; downloadBtn.dataset.url = url;
-        }
-
-        downloadBtn.disabled = false; statusEl.textContent = 'Done.'; log('Done.');
-      } catch (e) {
-        console.error(e); log(String(e)); statusEl.textContent = 'Error.';
-      }
-    }
-
-    renderBtn.addEventListener('click', renderVideo);
-    downloadBtn.addEventListener('click', () => {
-      const url = downloadBtn.dataset.url; if (!url) return;
-      const a = document.createElement('a'); a.href = url; a.download = 'pi-video-maker.mp4'; a.click();
-    });
-
-    // --- Minimal Pi SDK setup (Sandbox) ---
-    const piStatus = document.getElementById('piStatus');
-    const piUser = document.getElementById('piUser');
-    const piSignInBtn = document.getElementById('piSignInBtn');
-const siteLinkEl = document.getElementById('siteLink');
-const copyLinkBtn = document.getElementById('copyLinkBtn');
-const copyMsg = document.getElementById('copyMsg');
-
-(function initLinkCopy(){
-  const url = window.location.href;
-  if (siteLinkEl) siteLinkEl.textContent = url;
-  if (copyLinkBtn) {
-    copyLinkBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(url);
-        if (copyMsg) copyMsg.textContent = 'Copied ✅ Now open it in Pi Browser.';
-      } catch(e) {
-        // Fallback: select text (best-effort)
-        if (copyMsg) copyMsg.textContent = 'Copy not supported on this device. Please copy the URL manually.';
-      }
-    });
+  function log(msg){
+    const el=document.getElementById('log');
+    const ts=new Date().toISOString().slice(11,19);
+    el.textContent += `[${ts}] ${msg}\n`;
   }
-})();
 
-const piPayBtn = document.getElementById('piPayBtn');
-const piAmountInput = document.getElementById('piAmountInput');
-
-const piSdkState = document.getElementById('piSdkState');
-const piModeState = document.getElementById('piModeState');
-const piStatus = document.getElementById('piStatus');
-const piUser = document.getElementById('piUser');
-
-let piReady = false;
-let piSignedIn = false;
-let piAuthUser = null;
-const isPiHost = /(^|\.)minepi\.com$/i.test(window.location.hostname) || /PiBrowser/i.test(navigator.userAgent);
-
-function setStatus(msg){ if (piStatus) piStatus.textContent = msg; }
-function setUser(msg){ if (piUser) piUser.textContent = msg; }
-
-function parsePiAmount(raw){
-  const s = String(raw || '').trim();
-  const n = Number(s.replace(/[^0-9.]/g,''));
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n;
-}
-
-function refreshButtons(){
-  // Init is removed; Sign-in should be clickable as soon as user opens inside Pi Browser/Sandbox.
-  // We keep it enabled in Pi hosts even if SDK is still loading (user can tap to retry).
-  if (piSignInBtn) piSignInBtn.disabled = !(isPiHost || piReady);
-  if (piPayBtn) piPayBtn.disabled = !(piReady && piSignedIn);
-}
-
-function onIncompletePaymentFound(payment) {
-  console.log('incomplete payment found', payment);
-  setStatus('Found an incomplete payment (check console).');
-}
-
-function waitForPiSdk(timeoutMs = 60000){
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    const t = setInterval(() => {
-      if (window.Pi) { clearInterval(t); resolve(window.Pi); return; }
-      if (Date.now() - start > timeoutMs) { clearInterval(t); reject(new Error('Pi SDK not found')); }
-    }, 150);
-  });
-}
-
-(async () => {
-  try {
-    await waitForPiSdk();
-    piReady = true;
-    if (piSdkState) piSdkState.textContent = 'ready';
-    try { window.Pi.init({ sandbox: true }); if (piModeState) piModeState.textContent = 'Sandbox'; } catch(e){}
-    setStatus('Pi SDK loaded. Please sign in first.');
-    refreshButtons();
-  } catch (e) {
-    // If user is inside Pi Browser/Sandbox, SDK sometimes loads slowly.
-    // Keep Sign-in button enabled and keep retrying in the background.
-    if (piSdkState) piSdkState.textContent = isPiHost ? 'loading…' : 'not detected';
-    setStatus(isPiHost ? 'Pi SDK is loading… please wait a few seconds, then tap “Sign in with Pi”.' 
-                       : 'Open this page inside Pi Browser (or Pi Sandbox).');
-    refreshButtons();
-
-    if (isPiHost) {
-      const t = setInterval(() => {
-        if (window.Pi) {
-          clearInterval(t);
-          piReady = true;
-          if (piSdkState) piSdkState.textContent = 'ready';
-          try { window.Pi.init({ sandbox: true }); if (piModeState) piModeState.textContent = 'Sandbox'; } catch(e){}
-          setStatus('Pi SDK loaded. Please sign in first.');
-          refreshButtons();
-        }
-      }, 500);
+  function onMaybeReady(){
+    const hasPi = !!window.Pi;
+    piPresentEl.textContent = hasPi ? 'YES' : 'NO';
+    if (hasPi){
+      statusEl.textContent = 'Pi SDK ready ✅';
+      try{
+        window.Pi.init({ sandbox: true });
+        modeEl.textContent = 'sandbox init called';
+        log('Pi.init({sandbox:true}) called.');
+      }catch(e){
+        modeEl.textContent = 'init threw (ok sometimes)';
+        log('Pi.init threw: ' + String(e));
+      }
+      signInBtn.disabled = false;
+    } else {
+      statusEl.textContent = 'Pi SDK not available yet…';
+      signInBtn.disabled = true;
     }
   }
-})();
 
-if (piInitBtn) {
-  piInitBtn.addEventListener('click', () => {
-    if (!window.Pi) return;
-    try {
-      window.Pi.init({ sandbox: true });
-      if (piModeState) piModeState.textContent = 'Sandbox';
-      setStatus('Sandbox initialized. Tap “Sign in with Pi”.');
-    } catch (e) {
-      console.error(e);
-      setStatus('Init failed. Please open in Pi Browser Sandbox.');
+  // Show environment
+  envEl.textContent =
+    'hostname: ' + location.hostname + '\n' +
+    'href: ' + location.href + '\n' +
+    'userAgent: ' + navigator.userAgent + '\n';
+
+  // Poll for window.Pi
+  const poll = setInterval(() => {
+    if (window.Pi){
+      clearInterval(poll);
+      log('Detected window.Pi via polling.');
+      onMaybeReady();
+    }
+  }, 300);
+
+  // Also run once after load
+  window.addEventListener('load', () => {
+    log('Window load event fired.');
+    onMaybeReady();
+    setTimeout(onMaybeReady, 1500);
+    setTimeout(onMaybeReady, 4000);
+  });
+
+  reloadBtn.addEventListener('click', () => {
+    log('Manual reload requested.');
+    // reuse inject function from head if present
+    if (typeof injectPiSdk === 'function') injectPiSdk();
+    setTimeout(onMaybeReady, 800);
+  });
+
+  signInBtn.addEventListener('click', async () => {
+    if (!window.Pi){ log('Sign-in clicked but window.Pi missing.'); return; }
+    try{
+      statusEl.textContent = 'Signing in…';
+      log('Calling Pi.authenticate([payments])…');
+      const user = await window.Pi.authenticate(['payments'], (p)=>log('Incomplete payment found: '+JSON.stringify(p||{})));
+      signedIn = true;
+      const u = user?.user?.username || user?.username || 'unknown';
+      userLine.textContent = 'Signed in as: ' + u;
+      statusEl.textContent = 'Signed in ✅';
+      payBtn.disabled = false;
+      log('Authenticate success: ' + JSON.stringify(user||{}));
+    }catch(e){
+      statusEl.textContent = 'Sign-in failed/cancelled';
+      log('Authenticate error: ' + String(e));
     }
   });
-}
 
-if (piSignInBtn) {
-  piSignInBtn.addEventListener('click', async () => {
-    try {
-      if (!window.Pi) {
-        setStatus('Pi SDK not ready yet… waiting');
-        await waitForPiSdk(60000);
-        piReady = true;
-        if (piSdkState) piSdkState.textContent = 'ready';
-        try { window.Pi.init({ sandbox: true }); if (piModeState) piModeState.textContent = 'Sandbox'; } catch(e){}
-      }
-      setStatus('Signing in…');
-      const user = await window.Pi.authenticate(['payments'], onIncompletePaymentFound);
-      piAuthUser = user;
-      piSignedIn = true;
-      const username = user?.user?.username || user?.username || 'unknown';
-      setUser('Signed in as: ' + username);
-      setStatus('Signed in ✅ You can now pay.');
-      refreshButtons();
-    } catch (e) {
-      console.error(e);
-      setStatus('Sign-in cancelled or failed.');
-      setUser('Not signed in');
-      piSignedIn = false;
-      refreshButtons();
-    }
-  });
-}
-
-if (piPayBtn) {
-  piPayBtn.addEventListener('click', async () => {
-    if (!window.Pi) return;
-    if (!piSignedIn) { setStatus('Please sign in first.'); return; }
-
-    const amount = parsePiAmount(piAmountInput?.value);
-    if (!amount) { setStatus('Invalid amount. Example: 1 or 0.5'); return; }
-
-    // Use your existing product fields as memo/metadata if present
-    const titleEl = document.getElementById('titleInput');
-    const priceEl = document.getElementById('priceInput');
-    const voucherEl = document.getElementById('voucherInput');
-    const ctaEl = document.getElementById('ctaInput');
-
-    const title = (titleEl?.value || 'Digital Product').slice(0, 64);
-    const memo = `Pi Video Maker: ${title}`;
-    const metadata = {
-      title: titleEl?.value || '',
-      priceLabel: priceEl?.value || '',
-      voucher: voucherEl?.value || '',
-      cta: ctaEl?.value || '',
-      ts: Date.now()
-    };
-
-    try {
-      setStatus('Opening Pi payment…');
+  payBtn.addEventListener('click', async () => {
+    if (!window.Pi || !signedIn){ log('Pay clicked but not ready.'); return; }
+    try{
+      statusEl.textContent = 'Opening payment…';
+      log('Calling Pi.createPayment({amount:1})…');
       const payment = await window.Pi.createPayment(
-        { amount, memo, metadata },
+        { amount: 1, memo: 'Minimal test payment', metadata: { ts: Date.now() } },
         {
-          onReadyForServerApproval: (paymentId) => {
-            console.log('ready for server approval', paymentId);
-            // Frontend-only demo: we just show the state.
-            setStatus('Payment created. (Frontend-only demo: no server approval)');
-          },
-          onReadyForServerCompletion: (paymentId, txid) => {
-            console.log('ready for server completion', paymentId, txid);
-            setStatus('Payment completed ✅ (Frontend-only demo)');
-          },
-          onCancel: (paymentId) => {
-            console.log('payment cancelled', paymentId);
-            setStatus('Payment cancelled.');
-          },
-          onError: (error, payment) => {
-            console.error('payment error', error, payment);
-            setStatus('Payment error. Check console.');
-          }
+          onReadyForServerApproval: (paymentId) => log('readyForServerApproval: '+paymentId),
+          onReadyForServerCompletion: (paymentId, txid) => log('readyForServerCompletion: '+paymentId+' txid='+txid),
+          onCancel: (paymentId) => log('cancel: '+paymentId),
+          onError: (err) => log('payment error: '+String(err))
         }
       );
-      console.log('createPayment returned', payment);
-    } catch (e) {
-      console.error(e);
-      setStatus('Payment failed to start. Ensure you are in Pi Browser Sandbox.');
+      log('createPayment returned: ' + JSON.stringify(payment||{}));
+      statusEl.textContent = 'Payment flow opened ✅';
+    }catch(e){
+      statusEl.textContent = 'Payment failed to start';
+      log('createPayment error: ' + String(e));
     }
   });
-}
-
-refreshButtons();</script>
-
+</script>
 </body>
 </html>
