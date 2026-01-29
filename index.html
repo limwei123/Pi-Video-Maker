@@ -71,6 +71,19 @@
         <h2 class="font-bold">3) Actions</h2>
         <button id="renderBtn" class="w-full py-2 rounded-2xl bg-white text-black font-semibold disabled:opacity-40">Render 720p</button>
         <button id="downloadBtn" class="w-full py-2 rounded-2xl bg-neutral-700 font-semibold disabled:opacity-40" disabled>Download MP4</button>
+<!-- Pi Payment (Sandbox) -->
+<div class="mt-2 p-3 rounded-2xl bg-neutral-950/40 border border-white/10 space-y-2">
+  <div class="text-xs opacity-70">4) Pi Payment (Sandbox)</div>
+  <label class="block text-sm">Amount (Pi)
+    <input id="piAmountInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="1" value="1" />
+  </label>
+  <button id="piPayBtn" class="w-full py-2 rounded-2xl bg-emerald-300 text-black font-extrabold disabled:opacity-40" disabled>
+    Pay with Pi (Sandbox)
+  </button>
+  <p class="text-[11px] leading-snug opacity-70">
+    Note: This button opens the Pi payment flow. To <b>approve/complete</b> payments safely, you still need a backend endpoint.
+  </p>
+</div>
         <p id="status" class="text-xs opacity-80">Ready.</p>
       </div>
     </section>
@@ -279,6 +292,33 @@
     const piInitBtn = document.getElementById('piInitBtn');
     const piAuthBtn = document.getElementById('piAuthBtn');
 
+
+const piPayBtn = document.getElementById('piPayBtn');
+const piAmountInput = document.getElementById('piAmountInput');
+
+let piAuthUser = null;
+
+function parsePiAmount(raw){
+  const s = String(raw || '').trim();
+  const n = Number(s.replace(/[^0-9.]/g,''));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+async function callBackend(path, payload){
+  // Optional backend endpoints. If you don't have them yet, the UI will show a clear error.
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(()=> '');
+    throw new Error(`Backend ${path} failed: ${res.status} ${t}`);
+  }
+  return res.json().catch(()=> ({}));
+}
+
     function setStatus(msg){ piStatus.innerHTML = 'Pi SDK: <span class="opacity-80">' + msg + '</span>'; }
 
     // Load Pi SDK if available (works in Pi Browser)
@@ -302,14 +342,95 @@
         const scopes = ['payments']; // minimal scope
         const user = await window.Pi.authenticate(scopes, onIncompletePaymentFound);
         piUser.textContent = 'Logged in as: ' + (user?.user?.username || 'unknown');
+
+piAuthUser = user;
+if (piPayBtn) piPayBtn.disabled = false;
       } catch (e) {
         piUser.textContent = 'Auth error: ' + e;
       }
     });
 
-    function onIncompletePaymentFound(payment) {
-      console.log('incomplete payment', payment);
-    }
+    
+async function startPiPayment(){
+  if (!window.Pi) return;
+  if (!piAuthUser) {
+    piUser.textContent = 'Please Authenticate first.';
+    return;
+  }
+  const amount = parsePiAmount(piAmountInput?.value);
+  if (!amount) {
+    piUser.textContent = 'Invalid Pi amount. Example: 1 or 0.5';
+    return;
+  }
+
+  const title = (titleInput.value || 'Digital Product').slice(0, 64);
+  const memo = `Pi Video Maker: ${title}`;
+  const metadata = {
+    title: titleInput.value || '',
+    priceLabel: priceInput.value || '',
+    voucher: voucherInput.value || '',
+    cta: ctaInput.value || '',
+    ts: Date.now()
+  };
+
+  try {
+    // This opens the Pi payment UI (Sandbox).
+    const payment = await window.Pi.createPayment({
+      amount,
+      memo,
+      metadata
+    }, {
+      onReadyForServerApproval: async (paymentId) => {
+        log(`Pi payment ready for server approval: ${paymentId}`);
+        statusEl.textContent = 'Payment created. Waiting server approval…';
+        try {
+          await callBackend('/api/pi/approve', { paymentId });
+          log('Server approval OK.');
+          statusEl.textContent = 'Approved. Waiting completion…';
+        } catch (e) {
+          log(String(e));
+          statusEl.textContent = 'Backend not set: approval failed.';
+        }
+      },
+      onReadyForServerCompletion: async (paymentId, txid) => {
+        log(`Pi payment ready for completion: ${paymentId} txid=${txid || ''}`);
+        try {
+          await callBackend('/api/pi/complete', { paymentId, txid });
+          log('Server completion OK.');
+          statusEl.textContent = 'Payment completed ✅';
+        } catch (e) {
+          log(String(e));
+          statusEl.textContent = 'Backend not set: completion failed.';
+        }
+      },
+      onCancel: async (paymentId) => {
+        log(`Pi payment cancelled: ${paymentId}`);
+        statusEl.textContent = 'Payment cancelled.';
+        try { await callBackend('/api/pi/cancel', { paymentId }); } catch(e){ /* ignore */ }
+      },
+      onError: (error, payment) => {
+        console.error(error, payment);
+        log(`Pi payment error: ${String(error)}`);
+        statusEl.textContent = 'Payment error.';
+      }
+    });
+
+    log(`Pi.createPayment returned: ${JSON.stringify(payment || {})}`);
+  } catch (e) {
+    log(`Pi.createPayment failed: ${String(e)}`);
+    statusEl.textContent = 'Payment failed to start.';
+  }
+}
+
+if (piPayBtn) {
+  piPayBtn.addEventListener('click', startPiPayment);
+}
+
+function onIncompletePaymentFound(payment) {
+  console.log('incomplete payment', payment);
+  log('Found incomplete payment: ' + JSON.stringify(payment || {}));
+  statusEl.textContent = 'Incomplete payment found (see log).';
+}
   </script>
 
 </body>
