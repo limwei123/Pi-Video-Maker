@@ -362,6 +362,7 @@ const piUser = document.getElementById('piUser');
 let piReady = false;
 let piSignedIn = false;
 let piAuthUser = null;
+const isPiHost = /(^|\.)minepi\.com$/i.test(window.location.hostname) || /PiBrowser/i.test(navigator.userAgent);
 
 function setStatus(msg){ if (piStatus) piStatus.textContent = msg; }
 function setUser(msg){ if (piUser) piUser.textContent = msg; }
@@ -374,7 +375,9 @@ function parsePiAmount(raw){
 }
 
 function refreshButtons(){
-    if (piSignInBtn) piSignInBtn.disabled = !piReady;
+  // Init is removed; Sign-in should be clickable as soon as user opens inside Pi Browser/Sandbox.
+  // We keep it enabled in Pi hosts even if SDK is still loading (user can tap to retry).
+  if (piSignInBtn) piSignInBtn.disabled = !(isPiHost || piReady);
   if (piPayBtn) piPayBtn.disabled = !(piReady && piSignedIn);
 }
 
@@ -383,7 +386,7 @@ function onIncompletePaymentFound(payment) {
   setStatus('Found an incomplete payment (check console).');
 }
 
-function waitForPiSdk(timeoutMs = 12000){
+function waitForPiSdk(timeoutMs = 60000){
   return new Promise((resolve, reject) => {
     const start = Date.now();
     const t = setInterval(() => {
@@ -402,9 +405,25 @@ function waitForPiSdk(timeoutMs = 12000){
     setStatus('Pi SDK loaded. Please sign in first.');
     refreshButtons();
   } catch (e) {
-    if (piSdkState) piSdkState.textContent = 'not detected';
-    setStatus('Open this page inside Pi Browser (or Pi Sandbox).');
+    // If user is inside Pi Browser/Sandbox, SDK sometimes loads slowly.
+    // Keep Sign-in button enabled and keep retrying in the background.
+    if (piSdkState) piSdkState.textContent = isPiHost ? 'loading…' : 'not detected';
+    setStatus(isPiHost ? 'Pi SDK is loading… please wait a few seconds, then tap “Sign in with Pi”.' 
+                       : 'Open this page inside Pi Browser (or Pi Sandbox).');
     refreshButtons();
+
+    if (isPiHost) {
+      const t = setInterval(() => {
+        if (window.Pi) {
+          clearInterval(t);
+          piReady = true;
+          if (piSdkState) piSdkState.textContent = 'ready';
+          try { window.Pi.init({ sandbox: true }); if (piModeState) piModeState.textContent = 'Sandbox'; } catch(e){}
+          setStatus('Pi SDK loaded. Please sign in first.');
+          refreshButtons();
+        }
+      }, 500);
+    }
   }
 })();
 
@@ -424,8 +443,14 @@ if (piInitBtn) {
 
 if (piSignInBtn) {
   piSignInBtn.addEventListener('click', async () => {
-    if (!window.Pi) return;
     try {
+      if (!window.Pi) {
+        setStatus('Pi SDK not ready yet… waiting');
+        await waitForPiSdk(60000);
+        piReady = true;
+        if (piSdkState) piSdkState.textContent = 'ready';
+        try { window.Pi.init({ sandbox: true }); if (piModeState) piModeState.textContent = 'Sandbox'; } catch(e){}
+      }
       setStatus('Signing in…');
       const user = await window.Pi.authenticate(['payments'], onIncompletePaymentFound);
       piAuthUser = user;
