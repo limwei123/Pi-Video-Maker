@@ -31,26 +31,8 @@
     </div>
   </div>
 
-  <div class="mt-4 grid md:grid-cols-3 gap-3">
-    <div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
-      <div class="text-xs opacity-70">Step 1</div>
-      <div class="font-bold">Init Sandbox</div>
-      <button id="piInitBtn" class="w-full py-2 rounded-2xl bg-white text-black font-extrabold disabled:opacity-40" disabled>
-        Init Sandbox
-      </button>
-      <p class="text-[11px] leading-snug opacity-70">
-        Open this page in <b>Pi Browser Sandbox</b>. Then tap Init.
-      </p>
-    </div>
-
-    <div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
-      <div class="text-xs opacity-70">Step 2</div>
-      <div class="font-bold">Sign in</div>
-      <button id="piSignInBtn" class="w-full py-2 rounded-2xl bg-indigo-300 text-black font-extrabold disabled:opacity-40" disabled>
-        Sign in with Pi
-      </button>
-      <div id="piUser" class="text-xs opacity-70">Not signed in</div>
-    </div>
+  <div class="mt-4 grid md:grid-cols-2 gap-3">
+    
 
     <div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
       <div class="text-xs opacity-70">Step 3</div>
@@ -68,7 +50,7 @@
     <div class="text-xs opacity-70">Status</div>
     <div id="piStatus" class="text-sm font-semibold">Waiting for Pi SDK…</div>
     <p class="text-[11px] leading-snug opacity-70 mt-2">
-      Tip: In Pi Browser Sandbox, enter your sandbox code in Pi App → Utilities → Sandbox, then open the Sandbox URL.
+      Tip: Open this page directly inside Pi Browser (Sandbox or Mainnet).
       <br/>
       Note: This is <b>frontend-only</b> (demo). For real production payment verification, a backend is recommended.
     </p>
@@ -317,8 +299,7 @@
     // --- Minimal Pi SDK setup (Sandbox) ---
     const piStatus = document.getElementById('piStatus');
     const piUser = document.getElementById('piUser');
-    const piInitBtn = document.getElementById('piInitBtn');
-const piSignInBtn = document.getElementById('piSignInBtn');
+    const piSignInBtn = document.getElementById('piSignInBtn');
 const piPayBtn = document.getElementById('piPayBtn');
 const piAmountInput = document.getElementById('piAmountInput');
 
@@ -342,8 +323,7 @@ function parsePiAmount(raw){
 }
 
 function refreshButtons(){
-  if (piInitBtn) piInitBtn.disabled = !piReady;
-  if (piSignInBtn) piSignInBtn.disabled = !piReady;
+    if (piSignInBtn) piSignInBtn.disabled = !piReady;
   if (piPayBtn) piPayBtn.disabled = !(piReady && piSignedIn);
 }
 
@@ -367,7 +347,8 @@ function waitForPiSdk(timeoutMs = 12000){
     await waitForPiSdk();
     piReady = true;
     if (piSdkState) piSdkState.textContent = 'ready';
-    setStatus('Pi SDK loaded. Tap “Init Sandbox”.');
+    try { window.Pi.init({ sandbox: true }); if (piModeState) piModeState.textContent = 'Sandbox'; } catch(e){}
+    setStatus('Pi SDK loaded. Tap “Sign in with Pi”.');
     refreshButtons();
   } catch (e) {
     if (piSdkState) piSdkState.textContent = 'not detected';
