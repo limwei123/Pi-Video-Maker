@@ -89,6 +89,8 @@
   const reloadBtn = document.getElementById('reloadBtn');
 
   let signedIn = false;
+  // Guard to avoid double init (React strict mode / repeated calls)
+  if (typeof window.__PI_SDK_INITED__ === 'undefined') window.__PI_SDK_INITED__ = false;
 
   function log(msg){
     const el=document.getElementById('log');
@@ -102,8 +104,15 @@
     if (hasPi){
       statusEl.textContent = 'Pi SDK ready ✅';
       try{
-        window.Pi.init({ sandbox: true });
-        modeEl.textContent = 'sandbox init called';
+        if (!window.__PI_SDK_INITED__) {
+          window.Pi.init({ sandbox: true });
+          window.__PI_SDK_INITED__ = true;
+          modeEl.textContent = 'sandbox init called';
+          log('Pi.init({sandbox:true}) called.');
+        } else {
+          modeEl.textContent = 'sandbox init already done';
+          log('Pi.init skipped (already inited).');
+        }
         log('Pi.init({sandbox:true}) called.');
       }catch(e){
         modeEl.textContent = 'init threw (ok sometimes)';
@@ -146,22 +155,30 @@
     setTimeout(onMaybeReady, 800);
   });
 
-  signInBtn.addEventListener('click', async () => {
+  signInBtn.addEventListener('click', () => {
     if (!window.Pi){ log('Sign-in clicked but window.Pi missing.'); return; }
-    try{
-      statusEl.textContent = 'Signing in…';
-      log('Calling Pi.authenticate([payments])…');
-      const user = await window.Pi.authenticate(['payments'], (p)=>log('Incomplete payment found: '+JSON.stringify(p||{})));
-      signedIn = true;
-      const u = user?.user?.username || user?.username || 'unknown';
-      userLine.textContent = 'Signed in as: ' + u;
-      statusEl.textContent = 'Signed in ✅';
-      payBtn.disabled = false;
-      log('Authenticate success: ' + JSON.stringify(user||{}));
-    }catch(e){
-      statusEl.textContent = 'Sign-in failed/cancelled';
-      log('Authenticate error: ' + String(e));
-    }
+
+    // IMPORTANT: Call Pi.authenticate() directly inside the click handler.
+    // Do NOT use async/await, setTimeout, or any other async work before this call.
+    statusEl.textContent = 'Signing in…';
+    log('Calling Pi.authenticate([username])…');
+
+    window.Pi.authenticate(['username'], (p)=>log('Incomplete payment found: '+JSON.stringify(p||{})))
+      .then((auth) => {
+        signedIn = true;
+        const u = auth?.user?.username || auth?.username || 'unknown';
+        userLine.textContent = 'Signed in as: ' + u;
+        statusEl.textContent = 'Signed in ✅';
+        payBtn.disabled = true;
+        log('Note: Payments not enabled (auth scope is username only).');
+        log('Authenticate success: ' + JSON.stringify(auth||{}));
+      })
+      .catch((e) => {
+        statusEl.textContent = 'Sign-in failed/cancelled';
+        // Print more useful error info
+        const msg = (e && (e.message || e.error || e.toString())) ? (e.message || e.error || e.toString()) : JSON.stringify(e);
+        log('Authenticate error: ' + msg);
+      });
   });
 
   payBtn.addEventListener('click', async () => {
