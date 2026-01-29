@@ -31,20 +31,50 @@
     </div>
   </div>
 
-  <div class="mt-4 grid md:grid-cols-2 gap-3">
-    
-
-    <div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
-      <div class="text-xs opacity-70">Step 3</div>
-      <div class="font-bold">Pay</div>
-      <label class="block text-sm">Amount (Pi)
-        <input id="piAmountInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="1" value="1" />
-      </label>
-      <button id="piPayBtn" class="w-full py-2 rounded-2xl bg-emerald-300 text-black font-extrabold disabled:opacity-40" disabled>
-        Pay with Pi
-      </button>
-    </div>
+<div class="mt-3 rounded-2xl bg-neutral-950/40 border border-white/10 p-4">
+  <div class="text-sm font-bold">How to use (2 clicks)</div>
+  <ol class="mt-2 list-decimal list-inside text-sm opacity-80 space-y-1">
+    <li>Open this link inside <b>Pi Browser</b>.</li>
+    <li>Tap <b>Sign in with Pi</b>, then tap <b>Pay with Pi</b>.</li>
+  </ol>
+  <div class="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center">
+    <div class="text-xs opacity-70 break-all">Link: <span id="siteLink"></span></div>
+    <button id="copyLinkBtn" class="sm:ml-auto px-3 py-2 rounded-2xl bg-white text-black font-extrabold">
+      Copy link
+    </button>
   </div>
+  <div id="copyMsg" class="text-xs opacity-70 mt-1"></div>
+</div>
+
+
+
+  <div class="mt-4 grid md:grid-cols-2 gap-3">
+<div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
+  <div class="text-xs opacity-70">Step 1</div>
+  <div class="font-bold">Sign in</div>
+  <button id="piSignInBtn" class="w-full py-2 rounded-2xl bg-indigo-300 text-black font-extrabold disabled:opacity-40" disabled>
+    Sign in with Pi
+  </button>
+  <div id="piUser" class="text-xs opacity-70">Not signed in</div>
+  <p class="text-[11px] leading-snug opacity-70">
+    Must sign in first before payment.
+  </p>
+</div>
+
+<div class="rounded-2xl bg-neutral-950/40 border border-white/10 p-4 space-y-2">
+  <div class="text-xs opacity-70">Step 2</div>
+  <div class="font-bold">Pay</div>
+  <label class="block text-sm">Amount (Pi)
+    <input id="piAmountInput" class="mt-1 w-full px-3 py-2 rounded bg-neutral-800" placeholder="1" value="1" />
+  </label>
+  <button id="piPayBtn" class="w-full py-2 rounded-2xl bg-emerald-300 text-black font-extrabold disabled:opacity-40" disabled>
+    Pay with Pi
+  </button>
+  <p class="text-[11px] leading-snug opacity-70">
+    Payment button will unlock after sign-in.
+  </p>
+</div>
+</div>
 
   <div class="mt-4 rounded-2xl bg-neutral-950/40 border border-white/10 p-4">
     <div class="text-xs opacity-70">Status</div>
@@ -300,6 +330,26 @@
     const piStatus = document.getElementById('piStatus');
     const piUser = document.getElementById('piUser');
     const piSignInBtn = document.getElementById('piSignInBtn');
+const siteLinkEl = document.getElementById('siteLink');
+const copyLinkBtn = document.getElementById('copyLinkBtn');
+const copyMsg = document.getElementById('copyMsg');
+
+(function initLinkCopy(){
+  const url = window.location.href;
+  if (siteLinkEl) siteLinkEl.textContent = url;
+  if (copyLinkBtn) {
+    copyLinkBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        if (copyMsg) copyMsg.textContent = 'Copied ✅ Now open it in Pi Browser.';
+      } catch(e) {
+        // Fallback: select text (best-effort)
+        if (copyMsg) copyMsg.textContent = 'Copy not supported on this device. Please copy the URL manually.';
+      }
+    });
+  }
+})();
+
 const piPayBtn = document.getElementById('piPayBtn');
 const piAmountInput = document.getElementById('piAmountInput');
 
@@ -348,7 +398,7 @@ function waitForPiSdk(timeoutMs = 12000){
     piReady = true;
     if (piSdkState) piSdkState.textContent = 'ready';
     try { window.Pi.init({ sandbox: true }); if (piModeState) piModeState.textContent = 'Sandbox'; } catch(e){}
-    setStatus('Pi SDK loaded. Tap “Sign in with Pi”.');
+    setStatus('Pi SDK loaded. Please sign in first.');
     refreshButtons();
   } catch (e) {
     if (piSdkState) piSdkState.textContent = 'not detected';
