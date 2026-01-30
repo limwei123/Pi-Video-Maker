@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pi SDK Minimal Test (v5)</title>
+  <title>Ultra Video Maker — Pi Auth + Payments (v6)</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b0b0f;color:#fff;margin:0;padding:16px}
-    h1{margin:10px 0 14px;font-size:34px}
+    h1{margin:10px 0 14px;font-size:30px}
     .card{background:#141421;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;margin:12px 0}
     button{width:100%;padding:12px 14px;border-radius:14px;border:0;font-weight:800}
     button:disabled{opacity:.45}
@@ -17,15 +17,18 @@
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .row > button{flex:1;min-width:180px}
     .badge{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.12);margin-left:8px;vertical-align:middle}
+    input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff}
+    .hint{opacity:.82;font-size:13px;line-height:1.35}
+    a{color:#9ad}
   </style>
 
   <!-- IMPORTANT:
        In Pi Browser Sandbox, window.Pi is usually injected already.
-       Loading the SDK script again can overwrite the injected bridge and break authenticate().
+       Loading the SDK script again can overwrite the injected bridge and break authenticate/createPayment.
        So we ONLY load https://sdk.minepi.com/pi-sdk.js if window.Pi is NOT present. -->
   <script>
     (function () {
-      if (window.Pi) return; // Use injected Pi bridge when available (Pi Browser/Sandbox)
+      if (window.Pi) return;
       var s = document.createElement('script');
       s.src = 'https://sdk.minepi.com/pi-sdk.js';
       s.async = true;
@@ -41,13 +44,25 @@
   </script>
 </head>
 <body>
-  <h1>Pi SDK Minimal Test <span class="badge">v5</span></h1>
+  <h1>Ultra Video Maker <span class="badge">v6</span></h1>
 
   <div class="card">
     <div><b>Open inside:</b> Pi Browser Sandbox</div>
-    <div style="opacity:.85;margin-top:6px">
-      Open <span class="mono">sandbox.minepi.com/app/ultra-video-maker</span>.
-      In Sandbox, this page should show <span class="mono">window.Pi: YES</span> even before loading external SDK.
+    <div class="hint" style="margin-top:6px">
+      Sandbox URL: <span class="mono">sandbox.minepi.com/app/ultra-video-maker</span><br/>
+      This page keeps Pi sign-in working and adds a safe payment flow (backend required for approve/complete).
+    </div>
+  </div>
+
+  <div class="card">
+    <div><b>Backend URL (for payment approve/complete)</b></div>
+    <div class="hint" style="margin:6px 0 10px">
+      Deploy the backend I provide (Vercel/Render/etc), then paste the base URL here.
+      Example: <span class="mono">https://YOUR-BACKEND.vercel.app</span>
+    </div>
+    <input id="backendUrl" placeholder="https://your-backend-domain.com" />
+    <div class="hint" style="margin-top:8px">
+      Tip: we store this in local storage on your device.
     </div>
   </div>
 
@@ -66,7 +81,7 @@
     </div>
 
     <div class="row" style="margin-top:10px">
-      <button id="payBtn" class="emerald" type="button" onclick="window.__piPayClick()" disabled>Pay with Pi (1 Pi)</button>
+      <button id="payBtn" class="emerald" type="button" onclick="window.__piPayClick()" disabled>Pay with Pi (1 π)</button>
     </div>
 
     <div style="opacity:.8;margin-top:8px" id="userLine">Not signed in</div>
@@ -77,7 +92,6 @@
     <div class="mono" id="log"></div>
   </div>
 
-  <!-- Cache-buster -->
-  <script src="./pi-auth.js?v=5"></script>
+  <script src="./pi-auth.js?v=6"></script>
 </body>
 </html>
