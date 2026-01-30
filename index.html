@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pi SDK Minimal Test</title>
+  <title>Pi SDK Minimal Test (v4)</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b0b0f;color:#fff;margin:0;padding:16px}
     h1{margin:10px 0 14px;font-size:34px}
@@ -17,17 +17,30 @@
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .row > button{flex:1;min-width:180px}
     a{color:#9ad}
+    .badge{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.12);margin-left:8px;vertical-align:middle}
   </style>
 
-  <!-- Load Pi SDK ONCE (do not inject it again in JS) -->
+  <!-- Load Pi SDK ONCE -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+  <!-- IMPORTANT: define direct click functions in global scope BEFORE body buttons are clicked -->
+  <script>
+    // pi-auth.js will assign these. We keep stubs so button click never errors.
+    window.__piReloadClick = window.__piReloadClick || function(){ console.log("Reload handler not ready yet"); };
+    window.__piSignInClick = window.__piSignInClick || function(){ console.log("Sign-in handler not ready yet"); };
+    window.__piPayClick = window.__piPayClick || function(){ console.log("Pay handler not ready yet"); };
+  </script>
 </head>
 <body>
-  <h1>Pi SDK Minimal Test</h1>
+  <h1>Pi SDK Minimal Test <span class="badge">v4</span></h1>
 
   <div class="card">
     <div><b>Open inside:</b> Pi Browser Sandbox</div>
-    <div style="opacity:.85;margin-top:6px">If sign-in fails, check (1) you are in sandbox (URL bar shows sandbox.minepi.com) and (2) your portal URLs match the domain being loaded.</div>
+    <div style="opacity:.85;margin-top:6px">
+      If sign-in fails, ensure you opened
+      <span class="mono">sandbox.minepi.com/app/ultra-video-maker</span>
+      and the loaded hostname matches your portal Development URL.
+    </div>
   </div>
 
   <div class="card">
@@ -38,13 +51,17 @@
   <div class="card">
     <div><b>Status</b></div>
     <div class="mono" id="status">Loading…</div>
+
     <div class="row" style="margin-top:12px">
-      <button id="reloadBtn" class="primary" type="button">Reload Pi SDK</button>
-      <button id="signinBtn" class="indigo" type="button" disabled>Sign in with Pi</button>
+      <!-- Inline onclick ensures Pi.authenticate is triggered from a true user gesture -->
+      <button id="reloadBtn" class="primary" type="button" onclick="window.__piReloadClick()">Reload Pi SDK</button>
+      <button id="signinBtn" class="indigo" type="button" onclick="window.__piSignInClick()" disabled>Sign in with Pi</button>
     </div>
+
     <div class="row" style="margin-top:10px">
-      <button id="payBtn" class="emerald" type="button" disabled>Pay with Pi (1 Pi)</button>
+      <button id="payBtn" class="emerald" type="button" onclick="window.__piPayClick()" disabled>Pay with Pi (1 Pi)</button>
     </div>
+
     <div style="opacity:.8;margin-top:8px" id="userLine">Not signed in</div>
   </div>
 
@@ -53,6 +70,7 @@
     <div class="mono" id="log"></div>
   </div>
 
-  <script src="./pi-auth.js"></script>
+  <!-- Cache-buster forces Pi Browser to fetch latest JS -->
+  <script src="./pi-auth.js?v=4"></script>
 </body>
 </html>
