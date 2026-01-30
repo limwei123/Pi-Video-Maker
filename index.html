@@ -1,31 +1,40 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ultra Video Maker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body { font-family: Arial, sans-serif; background:#0f172a; color:#e5e7eb; padding:20px; }
-    button { padding:12px 18px; margin:8px 0; font-size:16px; border-radius:8px; border:none; cursor:pointer; }
-    #signinBtn { background:#a5b4fc; }
-    #payBtn { background:#86efac; }
-    #status { margin:10px 0; font-weight:bold; }
-    pre { background:#020617; padding:10px; border-radius:6px; max-height:200px; overflow:auto; }
-  </style>
+
+  <script>
+    (function () {
+      if (window.Pi) return;
+      var s = document.createElement('script');
+      s.src = 'https://sdk.minepi.com/pi-sdk.js';
+      s.async = true;
+      document.head.appendChild(s);
+    })();
+  </script>
 </head>
-<body>
-  <h2>Ultra Video Maker</h2>
 
-  <div id="status">Loading Pi SDK…</div>
-  <div id="userLine"></div>
+<body style="background:#0b0b0f;color:white;font-family:sans-serif;padding:16px">
+  <h1>Ultra Video Maker</h1>
 
-  <button id="signinBtn" onclick="__piSignInClick()" disabled>Sign in with Pi</button><br/>
-  <button id="payBtn" onclick="__piPayClick()" disabled>Pay with Pi (1 Pi)</button>
+  <div id="status">Loading…</div>
 
-  <h3>Log</h3>
+  <button id="signinBtn" onclick="window.__piSignInClick()" disabled>
+    Sign in with Pi
+  </button>
+
+  <br><br>
+
+  <button id="payBtn" onclick="window.__piPayClick()" disabled>
+    Pay with Pi (1 Pi)
+  </button>
+
+  <p id="userLine">Not signed in</p>
+
   <pre id="log"></pre>
 
-  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script src="./pi-auth.js"></script>
 </body>
 </html>
