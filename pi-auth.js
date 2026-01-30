@@ -34,7 +34,7 @@
     setStatus("Signing in…");
 
     try {
-      const auth = await Pi.authenticate(["username"], () => {});
+      const auth = await Pi.authenticate(["username","payments"], () => {});
       userLine.textContent = "Signed in as: " + auth.user.username;
       setStatus("Signed in");
       payBtn.disabled = false;
