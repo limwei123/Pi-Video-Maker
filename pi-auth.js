@@ -68,7 +68,7 @@
     // Init only once
     if (!state.inited) {
       try {
-        window.Pi.init({ sandbox: true });
+        window.Pi.init({ version: "2.0", sandbox: true });
         state.inited = true;
         log('Pi.init({sandbox:true}) called.');
       } catch (e) {
