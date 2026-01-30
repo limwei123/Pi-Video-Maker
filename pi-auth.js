@@ -1,97 +1,161 @@
-// pi-auth.js — loads & initializes the Pi SDK safely (sandbox-friendly)
-// Key idea: `window.Pi` may exist before the SDK is fully ready for `Pi.authenticate()`.
-// We expose a *direct-click-safe* helper `window.piSignIn()` that refuses to auth until ready.
-// When ready, it dispatches `window` event: `pi-sdk-ready`.
-
+// pi-auth.js — robust Pi SDK init + auth (prevents calling authenticate before init)
 (function () {
-  // Flags (persist across reloads inside the same webview)
-  if (typeof window.__PI_SDK_INITED__ === "undefined") window.__PI_SDK_INITED__ = false;
-  if (typeof window.__PI_SDK_READY__ === "undefined") window.__PI_SDK_READY__ = false;
+  const envEl = document.getElementById('env');
+  const statusEl = document.getElementById('status');
+  const logEl = document.getElementById('log');
+  const reloadBtn = document.getElementById('reloadBtn');
+  const signInBtn = document.getElementById('signinBtn');
+  const payBtn = document.getElementById('payBtn');
+  const userLine = document.getElementById('userLine');
 
-  function markReadySoon() {
-    // Pi SDK sometimes needs a short moment after init() before authenticate() is allowed.
-    // We mark READY after a small delay and notify the page.
-    if (window.__PI_SDK_READY__) return;
-    setTimeout(() => {
-      window.__PI_SDK_READY__ = true;
-      try {
-        window.dispatchEvent(new Event("pi-sdk-ready"));
-      } catch (_) {}
-      console.log("✅ Pi SDK ready (authenticate enabled)");
-    }, 350);
+  function ts() {
+    const d = new Date();
+    return d.toISOString().slice(11, 19);
+  }
+  function log(msg) {
+    if (!logEl) return;
+    logEl.textContent += `[${ts()}] ${msg}\n`;
+  }
+  function setStatus(msg) {
+    if (statusEl) statusEl.textContent = msg;
   }
 
-  function initPi() {
-    if (!window.Pi || typeof window.Pi.init !== "function") return;
+  function renderEnv() {
+    if (!envEl) return;
+    envEl.textContent =
+      `hostname: ${location.hostname}\n` +
+      `href: ${location.href}\n` +
+      `userAgent: ${navigator.userAgent}\n` +
+      `window.Pi: ${window.Pi ? 'YES' : 'NO'}`;
+  }
 
-    // If init already called, just make sure we eventually mark ready
-    if (window.__PI_SDK_INITED__) {
-      markReadySoon();
+  // Single init guard across reloads
+  if (typeof window.__PI_INIT_STATE__ === 'undefined') {
+    window.__PI_INIT_STATE__ = { inited: false, ready: false, initAt: 0 };
+  }
+  const state = window.__PI_INIT_STATE__;
+
+  function disableAll() {
+    signInBtn.disabled = true;
+    payBtn.disabled = true;
+  }
+  function enableSignIn() {
+    signInBtn.disabled = false;
+  }
+
+  async function waitForPiObject(timeoutMs = 8000) {
+    const start = Date.now();
+    while (!window.Pi) {
+      if (Date.now() - start > timeoutMs) return false;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return true;
+  }
+
+  async function initPi() {
+    renderEnv();
+    disableAll();
+
+    const ok = await waitForPiObject();
+    if (!ok) {
+      setStatus('Pi SDK not found ❌');
+      log('Pi SDK not found (window.Pi missing).');
       return;
     }
 
-    try {
-      window.Pi.init({ sandbox: true });
-      window.__PI_SDK_INITED__ = true;
-      console.log("🚀 Pi SDK init() called (Sandbox Mode)");
-      markReadySoon();
-    } catch (e) {
-      console.error("❌ Pi SDK init error:", e);
-    }
-  }
-
-  // If SDK already present, init now
-  if (window.Pi) {
-    initPi();
-  } else {
-    // Otherwise, inject the SDK script once
-    const existing = document.querySelector('script[data-pi-sdk="1"]');
-    if (existing) {
-      existing.addEventListener("load", initPi);
+    // Call init only once
+    if (!state.inited) {
+      try {
+        // In sandbox testing, set sandbox:true. (Works in sandbox & won't break normal web; auth just won't complete outside Pi Browser.)
+        window.Pi.init({ sandbox: true });
+        state.inited = true;
+        state.initAt = Date.now();
+        log('Pi.init({sandbox:true}) called.');
+      } catch (e) {
+        setStatus('Pi.init error ❌');
+        log('Pi.init error: ' + (e?.message || JSON.stringify(e)));
+        return;
+      }
     } else {
-      const sdkScript = document.createElement("script");
-      sdkScript.src = "https://sdk.minepi.com/pi-sdk.js";
-      sdkScript.async = true;
-      sdkScript.dataset.piSdk = "1";
+      log('Pi.init skipped (already inited).');
+    }
 
-      sdkScript.onload = () => {
-        console.log("✅ Pi SDK script loaded (onload fired)");
-        initPi();
-      };
+    // IMPORTANT: Pi SDK sometimes throws “not initialized” if authenticate is called immediately after init.
+    // Give it a short warm-up window.
+    state.ready = false;
+    setStatus('Pi SDK initializing…');
+    await new Promise(r => setTimeout(r, 600));
+    state.ready = true;
 
-      sdkScript.onerror = () => {
-        console.error("⚠️ Failed to load Pi SDK script");
-      };
+    setStatus('Pi SDK ready ✅');
+    enableSignIn();
+    log('Pi SDK marked ready (warm-up complete).');
+  }
 
-      document.head.appendChild(sdkScript);
+  async function signIn() {
+    // Must be called directly from button click (no await before calling authenticate)
+    if (!window.Pi) { log('Sign-in clicked but window.Pi missing.'); return; }
+    if (!state.inited) { log('Sign-in clicked but init not done yet.'); await initPi(); }
+    if (!state.ready) { log('Sign-in blocked: SDK still warming up. Try again in 1s.'); setStatus('Please wait 1s then tap Sign in again…'); return; }
+
+    try {
+      setStatus('Signing in…');
+      log('Calling Pi.authenticate([username])…');
+
+      // Use username scope first (simplest). Add payments later after sign-in works.
+      const auth = window.Pi.authenticate(['username'], () => {});
+      const user = await auth;
+
+      const uname = user?.user?.username || user?.username || 'unknown';
+      userLine.textContent = 'Signed in as: ' + uname;
+      setStatus('Signed in ✅');
+      payBtn.disabled = false;
+      log('Signed in success: ' + uname);
+    } catch (e) {
+      setStatus('Sign-in failed/cancelled');
+      log('Authenticate error: ' + (e?.message || JSON.stringify(e)));
     }
   }
 
-  /**
-   * Direct-click-safe sign-in helper.
-   * IMPORTANT: call this directly inside the button click handler.
-   * If not ready yet, it will *not* call authenticate (so it won't trigger the SDK error).
-   */
-  window.piSignIn = function (scopes) {
-    const wantedScopes = scopes || ["username"];
-
-    if (!window.Pi) {
-      const err = new Error("Pi SDK not loaded yet. Please tap 'Reload Pi SDK' and try again.");
-      console.error("❌", err);
-      throw err;
+  async function pay() {
+    if (!window.Pi) return;
+    if (!state.ready) { setStatus('Please sign in first'); return; }
+    try {
+      setStatus('Creating payment…');
+      log('Calling Pi.createPayment({amount:1})…');
+      const payment = await window.Pi.createPayment({
+        amount: 1,
+        memo: 'Test payment (1 Pi)',
+        metadata: { purpose: 'test' },
+      }, {
+        onReadyForServerApproval: (id) => log('Payment ready for server approval: ' + id),
+        onReadyForServerCompletion: (id) => log('Payment ready for completion: ' + id),
+        onCancel: (p) => log('Payment cancelled: ' + JSON.stringify(p||{})),
+        onError: (err) => log('Payment error: ' + (err?.message || JSON.stringify(err))),
+      });
+      log('Payment result: ' + JSON.stringify(payment || {}));
+      setStatus('Payment flow finished');
+    } catch (e) {
+      log('createPayment error: ' + (e?.message || JSON.stringify(e)));
+      setStatus('Payment error');
     }
+  }
 
-    // Ensure init is attempted
-    initPi();
+  reloadBtn.addEventListener('click', async () => {
+    log('Manual reload requested.');
+    // Reset only the "ready" state; keep inited flag to avoid double-init issues
+    state.ready = false;
+    await initPi();
+  });
 
-    // Refuse to auth until ready (keeps click 'direct' and avoids early-auth failures)
-    if (!window.__PI_SDK_READY__) {
-      const err = new Error("Pi SDK is still initializing. Wait 1 second and tap 'Sign in with Pi' again.");
-      console.warn("⏳", err.message);
-      throw err;
-    }
+  signInBtn.addEventListener('click', () => { signIn(); });
+  payBtn.addEventListener('click', () => { pay(); });
 
-    // Now safe to authenticate
-    return window.Pi.authenticate(wantedScopes, () => {});
-  };
+  window.addEventListener('load', async () => {
+    log('Window load event fired.');
+    await initPi();
+  });
+
+  // Also kick off init immediately (in case load already fired)
+  initPi();
 })();

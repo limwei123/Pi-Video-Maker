@@ -6,6 +6,7 @@
   <title>Pi SDK Minimal Test</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b0b0f;color:#fff;margin:0;padding:16px}
+    h1{margin:10px 0 14px;font-size:34px}
     .card{background:#141421;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;margin:12px 0}
     button{width:100%;padding:12px 14px;border-radius:14px;border:0;font-weight:800}
     button:disabled{opacity:.45}
@@ -18,38 +19,15 @@
     a{color:#9ad}
   </style>
 
-  <!-- Pi SDK -->
-  <script>
-    // Load Pi SDK with explicit onload/onerror so we can see what's happening.
-    function log(msg){
-      const el=document.getElementById('log');
-      const ts=new Date().toISOString().slice(11,19);
-      el.textContent += `[${ts}] ${msg}\n`;
-    }
-
-    function injectPiSdk(){
-      log('Injecting Pi SDK script…');
-      // Remove existing tags
-      document.querySelectorAll('script[data-pi-sdk="1"]').forEach(s=>s.remove());
-      const s=document.createElement('script');
-      s.src='https://sdk.minepi.com/pi-sdk.js?v='+Date.now();
-      s.async=true;
-      s.dataset.piSdk="1";
-      s.onload=()=>{ log('Pi SDK script loaded (onload fired).'); onMaybeReady(); };
-      s.onerror=()=>{ log('❌ Pi SDK script failed to load (onerror). Likely CSP/headers/network.'); onMaybeReady(); };
-      document.head.appendChild(s);
-    }
-
-    injectPiSdk();
-  </script>
+  <!-- Load Pi SDK ONCE (do not inject it again in JS) -->
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 </head>
 <body>
   <h1>Pi SDK Minimal Test</h1>
+
   <div class="card">
     <div><b>Open inside:</b> Pi Browser Sandbox</div>
-    <div style="opacity:.75;margin-top:6px">
-      If this still can't load Pi SDK in sandbox, the issue is not your app UI — it's deployment/headers.
-    </div>
+    <div style="opacity:.85;margin-top:6px">If sign-in fails, check (1) you are in sandbox (URL bar shows sandbox.minepi.com) and (2) your portal URLs match the domain being loaded.</div>
   </div>
 
   <div class="card">
@@ -59,18 +37,15 @@
 
   <div class="card">
     <div><b>Status</b></div>
-    <div id="status" style="font-weight:800">Checking…</div>
-    <div style="opacity:.75;margin-top:6px">window.Pi: <span id="piPresent">unknown</span></div>
-    <div style="opacity:.75">Mode: <span id="mode">unknown</span></div>
-  </div>
-
-  <div class="card">
-    <div class="row">
-      <button class="primary" id="reloadBtn">Reload Pi SDK</button>
-      <button class="indigo" id="signInBtn" disabled>Sign in with Pi</button>
+    <div class="mono" id="status">Loading…</div>
+    <div class="row" style="margin-top:12px">
+      <button id="reloadBtn" class="primary" type="button">Reload Pi SDK</button>
+      <button id="signinBtn" class="indigo" type="button" disabled>Sign in with Pi</button>
     </div>
-    <button class="emerald" id="payBtn" disabled style="margin-top:10px">Pay with Pi (1 Pi)</button>
-    <div style="opacity:.75;margin-top:8px" id="userLine">Not signed in</div>
+    <div class="row" style="margin-top:10px">
+      <button id="payBtn" class="emerald" type="button" disabled>Pay with Pi (1 Pi)</button>
+    </div>
+    <div style="opacity:.8;margin-top:8px" id="userLine">Not signed in</div>
   </div>
 
   <div class="card">
@@ -78,130 +53,6 @@
     <div class="mono" id="log"></div>
   </div>
 
-<script>
-  const statusEl = document.getElementById('status');
-  const piPresentEl = document.getElementById('piPresent');
-  const modeEl = document.getElementById('mode');
-  const envEl = document.getElementById('env');
-  const signInBtn = document.getElementById('signInBtn');
-  const payBtn = document.getElementById('payBtn');
-  const userLine = document.getElementById('userLine');
-  const reloadBtn = document.getElementById('reloadBtn');
-
-  let signedIn = false;
-  // Guard to avoid double init (React strict mode / repeated calls)
-  if (typeof window.__PI_SDK_INITED__ === 'undefined') window.__PI_SDK_INITED__ = false;
-
-  function log(msg){
-    const el=document.getElementById('log');
-    const ts=new Date().toISOString().slice(11,19);
-    el.textContent += `[${ts}] ${msg}\n`;
-  }
-
-  function onMaybeReady(){
-    const hasPi = !!window.Pi;
-    piPresentEl.textContent = hasPi ? 'YES' : 'NO';
-    if (hasPi){
-      statusEl.textContent = 'Pi SDK ready ✅';
-      try{
-        if (!window.__PI_SDK_INITED__) {
-          window.Pi.init({ sandbox: true });
-          window.__PI_SDK_INITED__ = true;
-          modeEl.textContent = 'sandbox init called';
-          log('Pi.init({sandbox:true}) called.');
-        } else {
-          modeEl.textContent = 'sandbox init already done';
-          log('Pi.init skipped (already inited).');
-        }
-        log('Pi.init({sandbox:true}) called.');
-      }catch(e){
-        modeEl.textContent = 'init threw (ok sometimes)';
-        log('Pi.init threw: ' + String(e));
-      }
-      signInBtn.disabled = false;
-    } else {
-      statusEl.textContent = 'Pi SDK not available yet…';
-      signInBtn.disabled = true;
-    }
-  }
-
-  // Show environment
-  envEl.textContent =
-    'hostname: ' + location.hostname + '\n' +
-    'href: ' + location.href + '\n' +
-    'userAgent: ' + navigator.userAgent + '\n';
-
-  // Poll for window.Pi
-  const poll = setInterval(() => {
-    if (window.Pi){
-      clearInterval(poll);
-      log('Detected window.Pi via polling.');
-      onMaybeReady();
-    }
-  }, 300);
-
-  // Also run once after load
-  window.addEventListener('load', () => {
-    log('Window load event fired.');
-    onMaybeReady();
-    setTimeout(onMaybeReady, 1500);
-    setTimeout(onMaybeReady, 4000);
-  });
-
-  reloadBtn.addEventListener('click', () => {
-    log('Manual reload requested.');
-    // reuse inject function from head if present
-    if (typeof injectPiSdk === 'function') injectPiSdk();
-    setTimeout(onMaybeReady, 800);
-  });
-
-  signInBtn.addEventListener('click', () => {
-    if (!window.Pi){ log('Sign-in clicked but window.Pi missing.'); return; }
-
-    // IMPORTANT: Call Pi.authenticate() directly inside the click handler.
-    // Do NOT use async/await, setTimeout, or any other async work before this call.
-    statusEl.textContent = 'Signing in…';
-    log('Calling Pi.authenticate([username])…');
-
-    window.Pi.authenticate(['username'], (p)=>log('Incomplete payment found: '+JSON.stringify(p||{})))
-      .then((auth) => {
-        signedIn = true;
-        const u = auth?.user?.username || auth?.username || 'unknown';
-        userLine.textContent = 'Signed in as: ' + u;
-        statusEl.textContent = 'Signed in ✅';
-        payBtn.disabled = true;
-        log('Note: Payments not enabled (auth scope is username only).');
-        log('Authenticate success: ' + JSON.stringify(auth||{}));
-      })
-      .catch((e) => {
-        statusEl.textContent = 'Sign-in failed/cancelled';
-        // Print more useful error info
-        const msg = (e && (e.message || e.error || e.toString())) ? (e.message || e.error || e.toString()) : JSON.stringify(e);
-        log('Authenticate error: ' + msg);
-      });
-  });
-
-  payBtn.addEventListener('click', async () => {
-    if (!window.Pi || !signedIn){ log('Pay clicked but not ready.'); return; }
-    try{
-      statusEl.textContent = 'Opening payment…';
-      log('Calling Pi.createPayment({amount:1})…');
-      const payment = await window.Pi.createPayment(
-        { amount: 1, memo: 'Minimal test payment', metadata: { ts: Date.now() } },
-        {
-          onReadyForServerApproval: (paymentId) => log('readyForServerApproval: '+paymentId),
-          onReadyForServerCompletion: (paymentId, txid) => log('readyForServerCompletion: '+paymentId+' txid='+txid),
-          onCancel: (paymentId) => log('cancel: '+paymentId),
-          onError: (err) => log('payment error: '+String(err))
-        }
-      );
-      log('createPayment returned: ' + JSON.stringify(payment||{}));
-      statusEl.textContent = 'Payment flow opened ✅';
-    }catch(e){
-      statusEl.textContent = 'Payment failed to start';
-      log('createPayment error: ' + String(e));
-    }
-  });
-</script>
+  <script src="./pi-auth.js"></script>
 </body>
 </html>
