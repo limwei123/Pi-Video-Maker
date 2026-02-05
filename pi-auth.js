@@ -52,7 +52,7 @@
         log("Signed in: " + auth.user.username);
       } catch (e) {
         setStatus("Sign-in cancelled");
-        log("Sign-in error: " + (e && e.message ? e.message : e)); console.error(e);
+        log("Sign-in error");
       }
     }
 
@@ -82,10 +82,10 @@
             });
             log("Payment completed");
             setStatus("Payment successful ✅");
-const m = window.location.pathname.match(/^\/app\/[^/]+/);
-            const prefix = m ? m[0] : "";
-            window.location.assign(`${window.location.origin}${prefix}/create-video`);
-          },
+            const m = window.location.pathname.match(/^\/app\/[^/]+/);
+            const base = m ? m[0] : "";
+            window.location.assign(`${window.location.origin}${base}/create-video`);
+},
 
           onCancel: () => {
             setStatus("Payment cancelled");
