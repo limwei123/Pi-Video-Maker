@@ -71,6 +71,16 @@
               body: JSON.stringify({ paymentId, txid })
             });
             setStatus("Payment successful");
+            // Redirect to the video creation page after successful payment
+            try {
+              setStatus("Redirecting…");
+              setTimeout(() => {
+                window.location.assign("https://pi-video-maker.vercel.app/create-video");
+              }, 300);
+            } catch (e) {
+              log("Redirect failed: " + (e && e.message ? e.message : e));
+              log("Open manually: https://pi-video-maker.vercel.app/create-video");
+            }
           },
           onCancel: () => setStatus("Payment cancelled"),
           onError: (err) => {

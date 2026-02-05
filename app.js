@@ -1,82 +1,75 @@
-const PI_AUTH_SCRIPT_ID = "pi-auth-script";
-const e = React.createElement;
+(function () {
+  const { createElement: e, useEffect, useState } = React;
 
-function loadPiAuthScript() {
-  if (document.getElementById(PI_AUTH_SCRIPT_ID)) {
-    return;
+  function CreateVideoPage() {
+    return e(
+      "main",
+      { style: { maxWidth: 520, margin: "0 auto", padding: 16 } },
+      e("h1", null, "Ultra Video Maker — Create Video"),
+      e("p", null, "✅ Payment confirmed. This is the placeholder for your video creating app."),
+      e("p", null, "Next: replace this page with your real video creator UI."),
+      e(
+        "button",
+        {
+          style: {
+            padding: "12px 16px",
+            borderRadius: 10,
+            border: "none",
+            cursor: "pointer",
+          },
+          onClick: () => (window.location.href = "/"),
+        },
+        "Back to Payment"
+      )
+    );
   }
 
-  const script = document.createElement("script");
-  script.id = PI_AUTH_SCRIPT_ID;
-  script.src = "./pi-auth.js";
-  script.async = true;
-  document.body.appendChild(script);
-}
+  function PaymentPage() {
+    // The Pi auth script will find these IDs and wire up the buttons.
+    return e(
+      "main",
+      { style: { maxWidth: 520, margin: "0 auto", padding: 16 } },
+      e("h1", null, "Ultra Video Maker"),
+      e("div", { id: "status", style: { marginBottom: 10 } }, "Loading…"),
+      e(
+        "button",
+        {
+          id: "signInBtn",
+          style: { padding: "12px 16px", borderRadius: 10, border: "none", cursor: "pointer" },
+          disabled: true,
+        },
+        "Sign in with Pi"
+      ),
+      e("div", { style: { height: 10 } }),
+      e(
+        "button",
+        {
+          id: "payBtn",
+          style: { padding: "12px 16px", borderRadius: 10, border: "none", cursor: "pointer" },
+          disabled: true,
+        },
+        "Pay with Pi (1π)"
+      ),
+      e("div", { style: { height: 14 } }),
+      e("div", { id: "userLine", style: { opacity: 0.9 } }, "Not signed in"),
+      e("pre", { id: "log", style: { marginTop: 14, whiteSpace: "pre-wrap", opacity: 0.9 } })
+    );
+  }
 
-function PaymentPage() {
-  loadPiAuthScript();
+  function App() {
+    const [path, setPath] = useState(window.location.pathname || "/");
 
-  return e(
-    "main",
-    null,
-    e("h1", null, "Ultra Video Maker"),
-    e("div", { id: "status" }, "Loading…"),
-    e(
-      "button",
-      {
-        id: "signinBtn",
-        onClick: () => window.__piSignInClick && window.__piSignInClick(),
-        disabled: true,
-      },
-      "Sign in with Pi"
-    ),
-    e("br"),
-    e("br"),
-    e(
-      "button",
-      {
-        id: "payBtn",
-        onClick: () => window.__piPayClick && window.__piPayClick(),
-        disabled: true,
-      },
-      "Pay with Pi (1 Pi)"
-    ),
-    e("p", { id: "userLine" }, "Not signed in"),
-    e("pre", { id: "log" })
-  );
-}
+    useEffect(() => {
+      const onPop = () => setPath(window.location.pathname || "/");
+      window.addEventListener("popstate", onPop);
+      return () => window.removeEventListener("popstate", onPop);
+    }, []);
 
-function CreateVideoPage() {
-  return e(
-    "main",
-    null,
-    e("h1", null, "Create Your Video"),
-    e("p", null, "Your video creation workspace will appear here soon.")
-  );
-}
-
-function NotFoundPage() {
-  return e(
-    "main",
-    null,
-    e("h1", null, "Page not found"),
-    e("p", null, "Return to / to start a payment.")
-  );
-}
-
-function App() {
-  const path = window.location.pathname;
-
-  if (path === "/") {
+    // Simple route: /create-video
+    if (path === "/create-video") return e(CreateVideoPage);
     return e(PaymentPage);
   }
 
-  if (path === "/create-video") {
-    return e(CreateVideoPage);
-  }
-
-  return e(NotFoundPage);
-}
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(e(App));
+  const root = document.getElementById("root");
+  ReactDOM.createRoot(root).render(e(App));
+})();
