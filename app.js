@@ -1,12 +1,3 @@
-import React, { useEffect } from "https://esm.sh/react@18.2.0";
-import { createRoot } from "https://esm.sh/react-dom@18.2.0/client";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link,
-} from "https://esm.sh/react-router-dom@6.23.1";
-
 const PI_AUTH_SCRIPT_ID = "pi-auth-script";
 const e = React.createElement;
 
@@ -23,9 +14,7 @@ function loadPiAuthScript() {
 }
 
 function PaymentPage() {
-  useEffect(() => {
-    loadPiAuthScript();
-  }, []);
+  loadPiAuthScript();
 
   return e(
     "main",
@@ -62,12 +51,7 @@ function CreateVideoPage() {
     "main",
     null,
     e("h1", null, "Create Your Video"),
-    e("p", null, "Your video creation workspace will appear here soon."),
-    e(
-      "p",
-      null,
-      e(Link, { to: "/" }, "Back to payments")
-    )
+    e("p", null, "Your video creation workspace will appear here soon.")
   );
 }
 
@@ -76,27 +60,23 @@ function NotFoundPage() {
     "main",
     null,
     e("h1", null, "Page not found"),
-    e(
-      "p",
-      null,
-      e(Link, { to: "/" }, "Return home")
-    )
+    e("p", null, "Return to / to start a payment.")
   );
 }
 
 function App() {
-  return e(
-    BrowserRouter,
-    null,
-    e(
-      Routes,
-      null,
-      e(Route, { path: "/", element: e(PaymentPage) }),
-      e(Route, { path: "/create-video", element: e(CreateVideoPage) }),
-      e(Route, { path: "*", element: e(NotFoundPage) })
-    )
-  );
+  const path = window.location.pathname;
+
+  if (path === "/") {
+    return e(PaymentPage);
+  }
+
+  if (path === "/create-video") {
+    return e(CreateVideoPage);
+  }
+
+  return e(NotFoundPage);
 }
 
-const root = createRoot(document.getElementById("root"));
+const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(e(App));
