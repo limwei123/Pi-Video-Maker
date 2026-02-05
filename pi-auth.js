@@ -1,174 +1,137 @@
 (function () {
-  function $(id) { return document.getElementById(id); }
-
-  function now() {
-    try { return new Date().toLocaleTimeString(); } catch { return ""; }
-  }
-
-  function appendLog(msg) {
-    const logEl = $("log");
-    if (!logEl) return;
-    logEl.textContent += `[${now()}] ${msg}\n`;
-  }
-
-  function setSdkStatus(msg) {
-    const el = $("sdkStatus");
-    if (el) el.textContent = msg;
-  }
-
-  function setUserLine(msg) {
-    const el = $("userLine");
-    if (el) el.textContent = msg;
-  }
-
-  function enable(btnId, yes) {
-    const b = $(btnId);
-    if (!b) return;
-    b.disabled = !yes;
-  }
-
-  function isSandboxMode() {
-    const q = new URLSearchParams(window.location.search);
-    if (q.get("sandbox") === "1" || q.get("sandbox") === "true") return true;
-    // When opened from the Pi sandbox portal, referrer is usually sandbox.minepi.com
-    if (/sandbox\.minepi\.com/i.test(document.referrer || "")) return true;
-    return false;
-  }
-
-  async function waitForPi(maxMs) {
-    const start = Date.now();
-    while (!window.Pi) {
-      if (Date.now() - start > maxMs) return false;
-      await new Promise(r => setTimeout(r, 100));
+  async function waitForElement(id) {
+    let el = document.getElementById(id);
+    while (!el) {
+      await new Promise(r => setTimeout(r, 50));
+      el = document.getElementById(id);
     }
-    return true;
-  }
-
-  async function initPi() {
-    setSdkStatus("Loading Pi SDK...");
-    const ok = await waitForPi(20000); // sandbox can be slow
-    if (!ok) {
-      setSdkStatus("Pi SDK failed to load");
-      appendLog("Pi SDK not found on window.Pi after timeout.");
-      return false;
-    }
-
-    const sandbox = isSandboxMode();
-    try {
-      window.Pi.init({ version: "2.0", sandbox });
-      setSdkStatus(sandbox ? "Pi SDK ready (sandbox)" : "Pi SDK ready");
-      appendLog(`Pi.init ok (sandbox=${sandbox}).`);
-      return true;
-    } catch (e) {
-      setSdkStatus("Pi SDK init error");
-      appendLog("Pi.init error: " + (e && e.message ? e.message : String(e)));
-      return false;
-    }
-  }
-
-  let auth = null;
-
-  async function signIn() {
-    enable("signInBtn", false);
-    setUserLine("Signing in...");
-    appendLog("Sign-in clicked.");
-
-    try {
-      // Request username + payments permission
-      auth = await window.Pi.authenticate(["username", "payments"], () => {});
-      appendLog("Pi.authenticate ok.");
-      const username = auth?.user?.username || "User";
-      setUserLine(`Signed in as ${username}`);
-      enable("payBtn", true);
-    } catch (e) {
-      auth = null;
-      appendLog("Pi.authenticate failed: " + (e && e.message ? e.message : String(e)));
-      setUserLine("Not signed in");
-      enable("signInBtn", true);
-    }
-  }
-
-  const BACKEND = "https://pi-payments-backend.vercel.app"; // your backend
-
-  async function pay() {
-    if (!auth) {
-      appendLog("Pay blocked: not signed in.");
-      return;
-    }
-    enable("payBtn", false);
-    appendLog("Pay clicked.");
-
-    try {
-      const paymentData = { amount: 1, memo: "Ultra Video Maker access" };
-      const callbacks = {
-        onReadyForServerApproval: async (paymentId) => {
-          appendLog("onReadyForServerApproval: " + paymentId);
-          await fetch(`${BACKEND}/approve`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId }),
-          });
-          appendLog("Server approve called.");
-        },
-        onReadyForServerCompletion: async (paymentId, txid) => {
-          appendLog("onReadyForServerCompletion: " + paymentId + " txid=" + txid);
-          await fetch(`${BACKEND}/complete`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId, txid }),
-          });
-          appendLog("Server complete called.");
-        },
-        onCancel: (paymentId) => {
-          appendLog("Payment cancelled: " + paymentId);
-          enable("payBtn", true);
-        },
-        onError: (error, payment) => {
-          appendLog("Payment error: " + (error?.message || String(error)));
-          if (payment?.identifier) appendLog("Payment id: " + payment.identifier);
-          enable("payBtn", true);
-        },
-      };
-
-      const payment = await window.Pi.createPayment(paymentData, callbacks);
-      appendLog("createPayment returned: " + (payment?.identifier || "(no id)"));
-
-      // If payment finished successfully, redirect
-      // Some Pi SDK flows resolve with payment status; redirect when we can.
-      // We'll do a small delay to allow callbacks to finish.
-      setTimeout(() => {
-        appendLog("Redirecting to /create-video");
-        window.location.assign("/create-video");
-      }, 800);
-
-    } catch (e) {
-      appendLog("createPayment exception: " + (e && e.message ? e.message : String(e)));
-      enable("payBtn", true);
-    }
+    return el;
   }
 
   async function bootstrap() {
-    // Only run on payment page
-    if (window.location.pathname === "/create-video") return;
+    const statusEl = await waitForElement('status');
+    const logEl = await waitForElement('log');
+    const signInBtn = await waitForElement('signinBtn');
+    const payBtn = await waitForElement('payBtn');
+    const userLine = await waitForElement('userLine');
 
-    // If the HTML isn't rendered yet, wait a bit
-    let tries = 0;
-    while ((!$("signInBtn") || !$("payBtn")) && tries < 80) {
-      await new Promise(r => setTimeout(r, 50));
-      tries++;
+    const BACKEND = "https://pi-payments-backend.vercel.app";
+    const isSandbox = window.location.hostname.includes("sandbox.minepi.com");
+
+    async function postJson(path, payload) {
+      const url = `${BACKEND}${path}?sandbox=${isSandbox ? "1" : "0"}`;
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, sandbox: isSandbox }),
+          signal: controller.signal,
+        });
+
+        // Try to read the body for better debug messages
+        const text = await res.text().catch(() => "");
+        if (!res.ok) {
+          throw new Error(`${path} failed: ${res.status} ${res.statusText} ${text}`.trim());
+        }
+        return text;
+      } finally {
+        clearTimeout(timer);
+      }
     }
-    if (!$("signInBtn")) return;
 
-    // Bind clicks
-    $("signInBtn").addEventListener("click", signIn);
-    $("payBtn").addEventListener("click", pay);
+    function log(msg) {
+      logEl.textContent += msg + "\n";
+    }
 
-    enable("signInBtn", false);
-    enable("payBtn", false);
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+    }
 
-    const ok = await initPi();
-    if (ok) enable("signInBtn", true);
-    else enable("signInBtn", true); // let user try anyway (sometimes Pi appears late)
+    async function waitForPi() {
+      while (!window.Pi) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+    }
+
+    async function init() {
+      await waitForPi();
+      const isSandbox = window.location.hostname.includes("sandbox.minepi.com");
+      Pi.init({ version: "2.0", sandbox: isSandbox });
+
+      signInBtn.disabled = false;
+      setStatus("Pi SDK ready");
+      log("Pi SDK ready");
+    }
+
+    async function signIn() {
+      setStatus("Signing in…");
+
+      try {
+        const auth = await Pi.authenticate(["username","payments"], () => {});
+        userLine.textContent = "Signed in as: " + auth.user.username;
+        setStatus("Signed in");
+        payBtn.disabled = false;
+        log("Signed in: " + auth.user.username);
+      } catch (e) {
+        setStatus("Sign-in cancelled");
+        log("Sign-in error");
+      }
+    }
+
+    async function pay() {
+      setStatus("Creating payment…");
+
+      try {
+        await Pi.createPayment({
+          amount: 1,
+          memo: "Ultra Video Maker Payment",
+          metadata: { app: "UltraVideoMaker" }
+        }, {
+          onReadyForServerApproval: async (paymentId) => {
+            await fetch(`${BACKEND}/api/pi/approve`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId })
+            });
+            log("Payment approved");
+          },
+
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            await fetch(`${BACKEND}/api/pi/complete`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid })
+            });
+            log("Payment completed");
+            setStatus("Payment successful ✅");
+window.location.assign("https://pi-video-maker.vercel.app/create-video");
+          },
+
+          onCancel: () => {
+            setStatus("Payment cancelled");
+            log("Payment cancelled");
+          },
+
+          onError: (e) => {
+            setStatus("Payment error");
+            log("Payment error");
+            console.error(e);
+          }
+        });
+      } catch (e) {
+        setStatus("Payment failed");
+        log("Payment failed");
+      }
+    }
+
+    window.__piSignInClick = signIn;
+    window.__piPayClick = pay;
+
+    init();
   }
 
   bootstrap();
