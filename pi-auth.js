@@ -33,7 +33,8 @@
 
     async function init() {
       await waitForPi();
-      Pi.init({ version: "2.0", sandbox: true });
+      const isSandbox = window.location.hostname.includes("sandbox.minepi.com");
+      Pi.init({ version: "2.0", sandbox: isSandbox });
 
       signInBtn.disabled = false;
       setStatus("Pi SDK ready");
