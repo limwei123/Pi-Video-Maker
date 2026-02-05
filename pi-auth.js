@@ -15,7 +15,20 @@
     const payBtn = await waitForElement('payBtn');
     const userLine = await waitForElement('userLine');
 
-    const BACKEND = "https://pi-payments-backend.vercel.app";
+    
+  function getSandboxPrefix() {
+    const p = window.location.pathname || "/";
+    if (!p.startsWith("/app/")) return "";
+    const parts = p.split("/");
+    const slug = parts[2] || "";
+    return slug ? `/app/${slug}` : "";
+  }
+
+  function redirectToCreateVideo() {
+    const prefix = getSandboxPrefix();
+    redirectToCreateVideo();
+}
+const BACKEND = "https://pi-payments-backend.vercel.app";
 
     function log(msg) {
       logEl.textContent += msg + "\n";
@@ -82,8 +95,8 @@
             });
             log("Payment completed");
             setStatus("Payment successful ✅");
-window.location.assign("https://pi-video-maker.vercel.app/create-video");
-          },
+redirectToCreateVideo();
+},
 
           onCancel: () => {
             setStatus("Payment cancelled");
