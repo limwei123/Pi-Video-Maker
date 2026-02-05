@@ -71,6 +71,7 @@
           });
           log("Payment completed");
           setStatus("Payment successful ✅");
+          window.location.assign("/create-video");
         },
 
         onCancel: () => {
