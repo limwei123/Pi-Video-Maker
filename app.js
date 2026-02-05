@@ -1,61 +1,82 @@
-(function () {
-  function el(tag, attrs, ...children) {
-    const node = document.createElement(tag);
-    if (attrs) {
-      for (const [k, v] of Object.entries(attrs)) {
-        if (k === "class") node.className = v;
-        else if (k === "text") node.textContent = v;
-        else if (k === "html") node.innerHTML = v;
-        else node.setAttribute(k, v);
-      }
-    }
-    for (const child of children) {
-      if (child == null) continue;
-      node.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
-    }
-    return node;
+const PI_AUTH_SCRIPT_ID = "pi-auth-script";
+const e = React.createElement;
+
+function loadPiAuthScript() {
+  if (document.getElementById(PI_AUTH_SCRIPT_ID)) {
+    return;
   }
 
-  function renderPayment(root) {
-    const wrap = el("div", { class: "wrap" });
-    wrap.appendChild(el("h1", { class: "title", text: "Ultra Video\nMaker" }));
+  const script = document.createElement("script");
+  script.id = PI_AUTH_SCRIPT_ID;
+  script.src = "./pi-auth.js";
+  script.async = true;
+  document.body.appendChild(script);
+}
 
-    wrap.appendChild(el("p", { class: "subtitle", id: "sdkStatus", text: "Loading Pi SDK..." }));
+function PaymentPage() {
+  loadPiAuthScript();
 
-    wrap.appendChild(el("button", { class: "btn orange", id: "signInBtn", disabled: "true", text: "Sign in with Pi" }));
-    wrap.appendChild(el("button", { class: "btn green", id: "payBtn", disabled: "true", text: "Pay with Pi (1π)" }));
+  return e(
+    "main",
+    null,
+    e("h1", null, "Ultra Video Maker"),
+    e("div", { id: "status" }, "Loading…"),
+    e(
+      "button",
+      {
+        id: "signinBtn",
+        onClick: () => window.__piSignInClick && window.__piSignInClick(),
+        disabled: true,
+      },
+      "Sign in with Pi"
+    ),
+    e("br"),
+    e("br"),
+    e(
+      "button",
+      {
+        id: "payBtn",
+        onClick: () => window.__piPayClick && window.__piPayClick(),
+        disabled: true,
+      },
+      "Pay with Pi (1 Pi)"
+    ),
+    e("p", { id: "userLine" }, "Not signed in"),
+    e("pre", { id: "log" })
+  );
+}
 
-    wrap.appendChild(el("div", { class: "statusLine", id: "userLine", text: "Not signed in" }));
-    wrap.appendChild(el("div", { class: "logbox", id: "log", text: "" }));
+function CreateVideoPage() {
+  return e(
+    "main",
+    null,
+    e("h1", null, "Create Your Video"),
+    e("p", null, "Your video creation workspace will appear here soon.")
+  );
+}
 
-    root.appendChild(wrap);
+function NotFoundPage() {
+  return e(
+    "main",
+    null,
+    e("h1", null, "Page not found"),
+    e("p", null, "Return to / to start a payment.")
+  );
+}
+
+function App() {
+  const path = window.location.pathname;
+
+  if (path === "/") {
+    return e(PaymentPage);
   }
 
-  function renderCreateVideo(root) {
-    const wrap = el("div", { class: "wrap" });
-    wrap.appendChild(el("h1", { class: "h2", html: "Ultra Video Maker<br/>— Create Video" }));
-
-    const row = el("div", { class: "okRow" },
-      el("div", { class: "okIcon", text: "✅" }),
-      el("div", { html: "<b>Payment confirmed.</b> This is the placeholder for your video creating app.<br/><br/>Next: replace this page with your real video creator UI." })
-    );
-    wrap.appendChild(row);
-
-    const back = el("button", { class: "smallBtn", id: "backBtn", text: "Back to Payment" });
-    back.onclick = () => { window.location.assign("/"); };
-    wrap.appendChild(el("div", { style: "margin-top:18px" }, back));
-
-    root.appendChild(wrap);
+  if (path === "/create-video") {
+    return e(CreateVideoPage);
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const root = document.getElementById("root");
-    if (!root) return;
+  return e(NotFoundPage);
+}
 
-    // Clear
-    root.innerHTML = "";
-
-    if (window.location.pathname === "/create-video") renderCreateVideo(root);
-    else renderPayment(root);
-  });
-})();
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(e(App));
