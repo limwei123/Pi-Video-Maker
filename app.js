@@ -8,6 +8,7 @@ import {
 } from "https://esm.sh/react-router-dom@6.23.1";
 
 const PI_AUTH_SCRIPT_ID = "pi-auth-script";
+const e = React.createElement;
 
 function loadPiAuthScript() {
   if (document.getElementById(PI_AUTH_SCRIPT_ID)) {
@@ -26,72 +27,76 @@ function PaymentPage() {
     loadPiAuthScript();
   }, []);
 
-  return (
-    <main>
-      <h1>Ultra Video Maker</h1>
-
-      <div id="status">Loading…</div>
-
-      <button
-        id="signinBtn"
-        onClick={() => window.__piSignInClick && window.__piSignInClick()}
-        disabled
-      >
-        Sign in with Pi
-      </button>
-
-      <br />
-      <br />
-
-      <button
-        id="payBtn"
-        onClick={() => window.__piPayClick && window.__piPayClick()}
-        disabled
-      >
-        Pay with Pi (1 Pi)
-      </button>
-
-      <p id="userLine">Not signed in</p>
-
-      <pre id="log"></pre>
-    </main>
+  return e(
+    "main",
+    null,
+    e("h1", null, "Ultra Video Maker"),
+    e("div", { id: "status" }, "Loading…"),
+    e(
+      "button",
+      {
+        id: "signinBtn",
+        onClick: () => window.__piSignInClick && window.__piSignInClick(),
+        disabled: true,
+      },
+      "Sign in with Pi"
+    ),
+    e("br"),
+    e("br"),
+    e(
+      "button",
+      {
+        id: "payBtn",
+        onClick: () => window.__piPayClick && window.__piPayClick(),
+        disabled: true,
+      },
+      "Pay with Pi (1 Pi)"
+    ),
+    e("p", { id: "userLine" }, "Not signed in"),
+    e("pre", { id: "log" })
   );
 }
 
 function CreateVideoPage() {
-  return (
-    <main>
-      <h1>Create Your Video</h1>
-      <p>Your video creation workspace will appear here soon.</p>
-      <p>
-        <Link to="/">Back to payments</Link>
-      </p>
-    </main>
+  return e(
+    "main",
+    null,
+    e("h1", null, "Create Your Video"),
+    e("p", null, "Your video creation workspace will appear here soon."),
+    e(
+      "p",
+      null,
+      e(Link, { to: "/" }, "Back to payments")
+    )
   );
 }
 
 function NotFoundPage() {
-  return (
-    <main>
-      <h1>Page not found</h1>
-      <p>
-        <Link to="/">Return home</Link>
-      </p>
-    </main>
+  return e(
+    "main",
+    null,
+    e("h1", null, "Page not found"),
+    e(
+      "p",
+      null,
+      e(Link, { to: "/" }, "Return home")
+    )
   );
 }
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<PaymentPage />} />
-        <Route path="/create-video" element={<CreateVideoPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </BrowserRouter>
+  return e(
+    BrowserRouter,
+    null,
+    e(
+      Routes,
+      null,
+      e(Route, { path: "/", element: e(PaymentPage) }),
+      e(Route, { path: "/create-video", element: e(CreateVideoPage) }),
+      e(Route, { path: "*", element: e(NotFoundPage) })
+    )
   );
 }
 
 const root = createRoot(document.getElementById("root"));
-root.render(<App />);
+root.render(e(App));
