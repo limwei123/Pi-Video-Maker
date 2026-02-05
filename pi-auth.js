@@ -1,4 +1,12 @@
 (function () {
+  // In Pi Sandbox, the app is served under /app/<slug>/... so we must handle a path prefix.
+  function getPathPrefix() {
+    const m = window.location.pathname.match(/^\/app\/[^\/]+/);
+    return m ? m[0] : "";
+  }
+
+  const IS_SANDBOX = window.location.hostname === "sandbox.minepi.com" || window.location.pathname.startsWith("/app/");
+
   async function waitForElement(id) {
     let el = document.getElementById(id);
     while (!el) {
@@ -15,20 +23,7 @@
     const payBtn = await waitForElement('payBtn');
     const userLine = await waitForElement('userLine');
 
-    
-  function getSandboxPrefix() {
-    const p = window.location.pathname || "/";
-    if (!p.startsWith("/app/")) return "";
-    const parts = p.split("/");
-    const slug = parts[2] || "";
-    return slug ? `/app/${slug}` : "";
-  }
-
-  function redirectToCreateVideo() {
-    const prefix = getSandboxPrefix();
-    redirectToCreateVideo();
-}
-const BACKEND = "https://pi-payments-backend.vercel.app";
+    const BACKEND = "https://pi-payments-backend.vercel.app";
 
     function log(msg) {
       logEl.textContent += msg + "\n";
@@ -95,8 +90,8 @@ const BACKEND = "https://pi-payments-backend.vercel.app";
             });
             log("Payment completed");
             setStatus("Payment successful ✅");
-redirectToCreateVideo();
-},
+window.location.assign(`${getPathPrefix()}/create-video`);
+          },
 
           onCancel: () => {
             setStatus("Payment cancelled");
