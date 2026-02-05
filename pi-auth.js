@@ -1,157 +1,138 @@
-// pi-auth.js - robust Pi SDK load + auth + payments + redirect
-// Loaded by app.js at runtime. Requires Vercel serverless endpoints: /api/approve and /api/complete
-
 (function () {
-  const LOG_ID = "log";
-  const STATUS_ID = "sdk-status";
-
-  function el(id) { return document.getElementById(id); }
-  function log(msg) {
-    const box = el(LOG_ID);
-    const ts = new Date().toLocaleTimeString();
-    if (box) box.textContent = `[${ts}] ${msg}\n` + box.textContent;
-    try { console.log("[PiAuth]", msg); } catch {}
-  }
-  function setStatus(text) {
-    const s = el(STATUS_ID);
-    if (s) s.textContent = text;
-  }
-
-  function isSandbox() {
-    return String(window.location.hostname || "").includes("sandbox.minepi.com");
-  }
-
-  function ensurePiSdkScript() {
-    // Pi Browser usually injects Pi, but sometimes loading fails.
-    if (document.getElementById("pi-sdk-js")) return;
-    const s = document.createElement("script");
-    s.id = "pi-sdk-js";
-    s.src = "https://sdk.minepi.com/pi-sdk.js";
-    s.defer = true;
-    s.onload = () => log("pi-sdk.js loaded.");
-    s.onerror = () => log("pi-sdk.js failed to load.");
-    document.head.appendChild(s);
-    log("Injecting pi-sdk.js…");
-  }
-
-  async function waitForPi(timeoutMs = 15000) {
-    const start = Date.now();
-
-    if (window.Pi) return window.Pi;
-    ensurePiSdkScript();
-
-    while (Date.now() - start < timeoutMs) {
-      await new Promise(r => setTimeout(r, 200));
-      if (window.Pi) return window.Pi;
+  async function waitForElement(id) {
+    let el = document.getElementById(id);
+    while (!el) {
+      await new Promise(r => setTimeout(r, 50));
+      el = document.getElementById(id);
     }
-    return null;
+    return el;
   }
 
-  async function initPi() {
-    setStatus("Loading…");
-    const Pi = await waitForPi();
+  async function bootstrap() {
+    const statusEl = await waitForElement('status');
+    const logEl = await waitForElement('log');
+    const signInBtn = await waitForElement('signinBtn');
+    const payBtn = await waitForElement('payBtn');
+    const userLine = await waitForElement('userLine');
 
-    if (!Pi) {
-      setStatus("Pi SDK failed to load");
-      log("Pi SDK not available after timeout.");
-      return null;
+    const BACKEND = "https://pi-payments-backend.vercel.app";
+
+    function log(msg) {
+      logEl.textContent += msg + "\n";
     }
 
-    const sandbox = isSandbox();
-    try {
-      Pi.init({ version: "2.0", sandbox });
-      setStatus(`Pi SDK ready${sandbox ? " (sandbox)" : ""}`);
-      log(`Pi.init ok (sandbox=${sandbox}).`);
-      return Pi;
-    } catch (e) {
-      setStatus("Pi init failed");
-      log("Pi.init error: " + (e && e.message ? e.message : String(e)));
-      return null;
+    function setStatus(msg) {
+      statusEl.textContent = msg;
     }
-  }
 
-  async function postJson(url, body) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body || {})
-    });
-    const txt = await res.text();
-    let data = null;
-    try { data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
-    if (!res.ok) {
-      const msg = (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${res.status}`;
-      throw new Error(msg);
-    }
-    return data;
-  }
-
-  window.PiAuth = {
-    Pi: null,
-    user: null,
-
-    async init() {
-      this.Pi = await initPi();
-      return !!this.Pi;
-    },
-
-    async signIn() {
-      const Pi = this.Pi || (await initPi());
-      if (!Pi) return null;
-
-      log("Sign-in clicked.");
-      try {
-        const auth = await Pi.authenticate(["username", "payments"], () => {});
-        this.user = auth.user || null;
-        log("Pi.authenticate ok.");
-        return auth;
-      } catch (e) {
-        log("Pi.authenticate error: " + (e && e.message ? e.message : String(e)));
-        return null;
+    async function waitForPi(timeoutMs = 15000) {
+      const start = Date.now();
+      while (!window.Pi) {
+        if (Date.now() - start > timeoutMs) {
+          throw new Error("Pi SDK not loaded");
+        }
+        await new Promise(r => setTimeout(r, 100));
       }
-    },
+    }
 
-    async pay({ amount = 1, memo = "Ultra Video Maker access" } = {}) {
-      const Pi = this.Pi || (await initPi());
-      if (!Pi) return { ok: false, error: "Pi SDK not loaded" };
+    function detectSandbox() {
+      // In Pi Sandbox, your app is usually inside an iframe under sandbox.minepi.com
+      // so location.hostname is still your domain (e.g. *.vercel.app).
+      const host = window.location.hostname;
+      const qs = new URLSearchParams(window.location.search);
+      const fromQuery = (qs.get("sandbox") || qs.get("pi_sandbox") || "").toLowerCase();
+      const viaAncestor = Array.from(window.location.ancestorOrigins || []).some(o => o.includes("sandbox.minepi.com"));
+      return host.includes("sandbox.minepi.com") || viaAncestor || fromQuery === "1" || fromQuery === "true";
+    }
 
-      const paymentData = {
-        amount,
-        memo,
-        metadata: { product: "ultra-video-maker" }
-      };
+    async function init() {
+      try {
+        await waitForPi();
+        const isSandbox = detectSandbox();
+        Pi.init({ version: "2.0", sandbox: isSandbox });
+
+        signInBtn.disabled = false;
+        setStatus(isSandbox ? "Pi SDK ready (sandbox)" : "Pi SDK ready");
+        log("Pi.init ok (sandbox=" + isSandbox + ").");
+      } catch (e) {
+        setStatus("Pi SDK failed to load");
+        log("Pi SDK failed to load. Open inside Pi Browser / Sandbox.");
+        console.error(e);
+      }
+    }
+
+    async function signIn() {
+      setStatus("Signing in…");
 
       try {
-        const payment = await Pi.createPayment(paymentData, {
+        log("Sign-in clicked.");
+        const auth = await Pi.authenticate(["username","payments"], () => {});
+        userLine.textContent = "Signed in as: " + auth.user.username;
+        setStatus("Signed in");
+        payBtn.disabled = false;
+        log("Pi.authenticate ok.");
+      } catch (e) {
+        setStatus("Sign-in cancelled");
+        log("Sign-in error: " + (e?.message || String(e)));
+      }
+    }
+
+    async function pay() {
+      setStatus("Creating payment…");
+
+      try {
+        await Pi.createPayment({
+          amount: 1,
+          memo: "Ultra Video Maker Payment",
+          metadata: { app: "UltraVideoMaker" }
+        }, {
           onReadyForServerApproval: async (paymentId) => {
             log("onReadyForServerApproval: " + paymentId);
-            // MUST call your backend quickly, otherwise payment expires in ~60s
-            await postJson("/api/approve", { paymentId });
-            log("Approved (server).");
+            const res = await fetch(`${BACKEND}/api/pi/approve`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId })
+            });
+            const txt = await res.text().catch(() => "");
+            log("approve status=" + res.status + (txt ? (" body=" + txt.slice(0, 120)) : ""));
           },
 
           onReadyForServerCompletion: async (paymentId, txid) => {
             log("onReadyForServerCompletion: " + paymentId + " txid=" + txid);
-            await postJson("/api/complete", { paymentId, txid });
-            log("Completed (server).");
+            const res = await fetch(`${BACKEND}/api/pi/complete`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid })
+            });
+            const txt = await res.text().catch(() => "");
+            log("complete status=" + res.status + (txt ? (" body=" + txt.slice(0, 120)) : ""));
+            setStatus("Payment successful ✅");
+            // Use relative path so it works in sandbox + prod.
+            window.location.assign("/create-video");
           },
 
-          onCancel: (paymentId) => {
-            log("Payment cancelled: " + paymentId);
+          onCancel: () => {
+            setStatus("Payment cancelled");
+            log("Payment cancelled");
           },
 
-          onError: (error, payment) => {
-            log("Payment error: " + (error && error.message ? error.message : String(error)));
-            try { if (payment) log("Payment obj: " + JSON.stringify(payment)); } catch {}
+          onError: (e) => {
+            setStatus("Payment error");
+            log("Payment error");
+            console.error(e);
           }
         });
-
-        log("Pi.createPayment resolved.");
-        return { ok: true, payment };
       } catch (e) {
-        log("Pi.createPayment threw: " + (e && e.message ? e.message : String(e)));
-        return { ok: false, error: e && e.message ? e.message : String(e) };
+        setStatus("Payment failed");
+        log("Payment failed");
       }
     }
-  };
+
+    window.__piSignInClick = signIn;
+    window.__piPayClick = pay;
+
+    init();
+  }
+
+  bootstrap();
 })();
