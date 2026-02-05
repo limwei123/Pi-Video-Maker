@@ -1,9 +1,20 @@
 (function () {
+  // Only run Pi auth/payment logic on the payment page ("/")
+  // so the redirect page ("/create-video") doesn't break.
+  const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
+  const isPaymentPage = (path === "/");
+
+  // If we're not on the payment page, do nothing.
+  if (!isPaymentPage) return;
+
   const statusEl = document.getElementById('status');
   const logEl = document.getElementById('log');
   const signInBtn = document.getElementById('signinBtn');
   const payBtn = document.getElementById('payBtn');
   const userLine = document.getElementById('userLine');
+
+  // Extra guard: if required DOM is missing, do nothing.
+  if (!statusEl || !logEl || !signInBtn || !payBtn || !userLine) return;
 
   const BACKEND = "https://pi-payments-backend.vercel.app";
 
@@ -23,6 +34,9 @@
 
   async function init() {
     await waitForPi();
+    // requirement #1: Pi SDK ready
+    // requirement #2: Pi sign-in available
+    // requirement #3: Pi payment available
     Pi.init({ version: "2.0", sandbox: true });
 
     signInBtn.disabled = false;
@@ -71,6 +85,10 @@
           });
           log("Payment completed");
           setStatus("Payment successful ✅");
+
+          // Redirect AFTER successful completion (your new requirement)
+          sessionStorage.setItem("uvm_paid", "1");
+          window.location.assign("/create-video");
         },
 
         onCancel: () => {

@@ -6,6 +6,7 @@
   <title>Ultra Video Maker</title>
 
   <script>
+    // Load Pi SDK ASAP (requirement #1: Pi SDK ready)
     (function () {
       if (window.Pi) return;
       var s = document.createElement('script');
@@ -17,24 +18,71 @@
 </head>
 
 <body style="background:#0b0b0f;color:white;font-family:sans-serif;padding:16px">
-  <h1>Ultra Video Maker</h1>
+  <!-- PAYMENT VIEW -->
+  <div id="paymentView">
+    <h1>Ultra Video Maker</h1>
 
-  <div id="status">Loading…</div>
+    <div id="status">Loading…</div>
 
-  <button id="signinBtn" onclick="window.__piSignInClick()" disabled>
-    Sign in with Pi
-  </button>
+    <button id="signinBtn" onclick="window.__piSignInClick && window.__piSignInClick()" disabled>
+      Sign in with Pi
+    </button>
 
-  <br><br>
+    <br><br>
 
-  <button id="payBtn" onclick="window.__piPayClick()" disabled>
-    Pay with Pi (1 Pi)
-  </button>
+    <button id="payBtn" onclick="window.__piPayClick && window.__piPayClick()" disabled>
+      Pay with Pi (1 Pi)
+    </button>
 
-  <p id="userLine">Not signed in</p>
+    <p id="userLine">Not signed in</p>
 
-  <pre id="log"></pre>
+    <pre id="log"></pre>
+  </div>
 
+  <!-- CREATE-VIDEO VIEW (redirect target after payment) -->
+  <div id="createView" style="display:none">
+    <h1>Create Your Video</h1>
+    <p id="createStatus" style="opacity:.9"></p>
+
+    <div style="margin-top:14px;padding:12px;border:1px solid rgba(255,255,255,.15);border-radius:10px">
+      <p style="margin:0 0 10px 0;opacity:.9">
+        Your video creation workspace will appear here.
+      </p>
+      <p style="margin:0;opacity:.7;font-size:14px">
+        (This is the redirect page. Plug your real video maker UI here.)
+      </p>
+    </div>
+
+    <div style="margin-top:16px">
+      <a href="/" style="color:#9ecbff;text-decoration:none">← Back to payment</a>
+    </div>
+  </div>
+
+  <script>
+    // Simple SPA routing (works with vercel.json rewrite)
+    (function () {
+      var p = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
+      var isCreate = (p === "/create-video");
+
+      var paymentView = document.getElementById("paymentView");
+      var createView = document.getElementById("createView");
+
+      if (paymentView) paymentView.style.display = isCreate ? "none" : "block";
+      if (createView) createView.style.display = isCreate ? "block" : "none";
+
+      if (isCreate) {
+        var paid = (sessionStorage.getItem("uvm_paid") === "1");
+        var el = document.getElementById("createStatus");
+        if (el) {
+          el.textContent = paid
+            ? "Payment verified (local session) ✅ Redirect successful."
+            : "Not verified. Please complete payment first, then you will be redirected here.";
+        }
+      }
+    })();
+  </script>
+
+  <!-- Keep the same file that handles Pi init + sign-in + payment -->
   <script src="./pi-auth.js"></script>
 </body>
 </html>
