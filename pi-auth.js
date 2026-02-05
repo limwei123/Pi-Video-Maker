@@ -71,7 +71,7 @@
           });
           log("Payment completed");
           setStatus("Payment successful ✅");
-          window.location.assign("/create-video");
+window.location.assign("https://pi-video-maker.vercel.app/create-video");
         },
 
         onCancel: () => {
