@@ -1,66 +1,119 @@
-let currentUser = null;
-
-function setStatus(msg){
-  document.getElementById("status").innerText = msg;
-}
-
-function setUser(u){
-  document.getElementById("userLine").innerText = "👤 " + u.username;
-}
-
-async function initPi(){
-  try{
-    const isSandbox = window.location.hostname.includes("sandbox");
-    Pi.init({ version:"2.0", sandbox:isSandbox });
-    setStatus("Pi SDK ready");
-  }catch(e){
-    setStatus("Pi SDK failed to load");
-    console.log(e);
+(function () {
+  async function waitForElement(id) {
+    let el = document.getElementById(id);
+    while (!el) {
+      await new Promise(r => setTimeout(r, 50));
+      el = document.getElementById(id);
+    }
+    return el;
   }
-}
 
-initPi();
+  async function bootstrap() {
+    const statusEl = await waitForElement('status');
+    const logEl = await waitForElement('log');
+    const signInBtn = await waitForElement('signinBtn');
+    const payBtn = await waitForElement('payBtn');
+    const userLine = await waitForElement('userLine');
 
-document.getElementById("signinBtn").onclick = async () =>{
-  try{
-    setStatus("Signing in...");
-    const scopes = ['username','payments'];
-    currentUser = await Pi.authenticate(scopes);
-    setUser(currentUser.user);
-    setStatus("Signed in ✅");
-    document.getElementById("payBtn").disabled=false;
-  }catch(e){
-    setStatus("Sign in failed");
-    console.log(e);
-  }
-};
+    const BACKEND = "https://pi-payments-backend.vercel.app";
 
-document.getElementById("payBtn").onclick = async ()=>{
-  try{
-    setStatus("Creating payment...");
-    const payment = await Pi.createPayment({
-      amount: 1,
-      memo: "Unlock video generator",
-      metadata:{}
-    },{
-      onReadyForServerApproval: function(paymentId){
-        console.log("ready approve", paymentId);
-      },
-      onReadyForServerCompletion: function(paymentId){
-        console.log("complete", paymentId);
-        setStatus("Payment success ✅");
-        window.location.href="/create-video";
-      },
-      onCancel: function(){
-        setStatus("Payment cancelled");
-      },
-      onError: function(e){
-        setStatus("Payment error");
-        console.log(e);
+    function log(msg) {
+      logEl.textContent += msg + "\n";
+    }
+
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+    }
+
+    async function waitForPi() {
+      while (!window.Pi) {
+        await new Promise(r => setTimeout(r, 100));
       }
-    });
-  }catch(e){
-    console.log(e);
-    setStatus("Payment failed");
+    }
+
+    async function init() {
+      await waitForPi();
+      const isSandbox =
+        window.location.hostname.includes("sandbox.minepi.com") ||
+        document.referrer.includes("sandbox.minepi.com") ||
+        new URLSearchParams(window.location.search).get("sandbox") === "true" ||
+        new URLSearchParams(window.location.search).get("pi_sandbox") === "1";
+
+      Pi.init({ version: "2.0", sandbox: isSandbox });
+
+      signInBtn.disabled = false;
+      setStatus("Pi SDK ready");
+      log("Pi SDK ready");
+    }
+
+    async function signIn() {
+      setStatus("Signing in…");
+
+      try {
+        const auth = await Pi.authenticate(["username","payments"], (payment) => {
+          log("Incomplete payment found: " + (payment && payment.identifier ? payment.identifier : ""));
+        });
+        userLine.textContent = "Signed in as: " + auth.user.username;
+        setStatus("Signed in");
+        payBtn.disabled = false;
+        log("Signed in: " + auth.user.username);
+      } catch (e) {
+        setStatus("Sign-in cancelled");
+        log("Sign-in error");
+      }
+    }
+
+    async function pay() {
+      setStatus("Creating payment…");
+
+      try {
+        await Pi.createPayment({
+          amount: 1,
+          memo: "Ultra Video Maker Payment",
+          metadata: { app: "UltraVideoMaker" }
+        }, {
+          onReadyForServerApproval: async (paymentId) => {
+            await fetch(`${BACKEND}/api/pi/approve`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId })
+            });
+            log("Payment approved");
+          },
+
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            await fetch(`${BACKEND}/api/pi/complete`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid })
+            });
+            log("Payment completed");
+            setStatus("Payment successful ✅");
+window.location.assign("https://pi-video-maker.vercel.app/create-video");
+          },
+
+          onCancel: () => {
+            setStatus("Payment cancelled");
+            log("Payment cancelled");
+          },
+
+          onError: (e) => {
+            setStatus("Payment error");
+            log("Payment error");
+            console.error(e);
+          }
+        });
+      } catch (e) {
+        setStatus("Payment failed");
+        log("Payment failed");
+      }
+    }
+
+    window.__piSignInClick = signIn;
+    window.__piPayClick = pay;
+
+    init();
   }
-};
+
+  bootstrap();
+})();
