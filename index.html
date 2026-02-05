@@ -17,10 +17,24 @@
 </head>
 
 <body style="background:#0b0b0f;color:white;font-family:sans-serif;padding:16px">
-  <div id="root"></div>
+  <h1>Ultra Video Maker</h1>
 
-  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="./app.js"></script>
+  <div id="status">Loading…</div>
+
+  <button id="signinBtn" onclick="window.__piSignInClick()" disabled>
+    Sign in with Pi
+  </button>
+
+  <br><br>
+
+  <button id="payBtn" onclick="window.__piPayClick()" disabled>
+    Pay with Pi (1 Pi)
+  </button>
+
+  <p id="userLine">Not signed in</p>
+
+  <pre id="log"></pre>
+
+  <script src="./pi-auth.js"></script>
 </body>
 </html>
