@@ -7,10 +7,6 @@
 
   const BACKEND = "https://pi-payments-backend.vercel.app";
 
-  // After a successful payment, redirect user to your video creation app/page.
-  // Change this to your real page (relative or full URL).
-  const REDIRECT_AFTER_PAYMENT = "./create.html";
-
   function log(msg) {
     logEl.textContent += msg + "\n";
   }
@@ -38,7 +34,7 @@
     setStatus("Signing in…");
 
     try {
-      const auth = await Pi.authenticate(["username"], () => {});
+      const auth = await Pi.authenticate(["username","payments"], () => {});
       userLine.textContent = "Signed in as: " + auth.user.username;
       setStatus("Signed in");
       payBtn.disabled = false;
@@ -59,38 +55,22 @@
         metadata: { app: "UltraVideoMaker" }
       }, {
         onReadyForServerApproval: async (paymentId) => {
-          const res = await fetch(`${BACKEND}/api/pi/approve`, {
+          await fetch(`${BACKEND}/api/pi/approve`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ paymentId })
           });
-
-          if (!res.ok) {
-            const txt = await res.text().catch(() => "");
-            throw new Error(`Approve failed: ${res.status} ${txt}`);
-          }
-
           log("Payment approved");
         },
 
         onReadyForServerCompletion: async (paymentId, txid) => {
-          const res = await fetch(`${BACKEND}/api/pi/complete`, {
+          await fetch(`${BACKEND}/api/pi/complete`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ paymentId, txid })
           });
-
-          if (!res.ok) {
-            const txt = await res.text().catch(() => "");
-            throw new Error(`Complete failed: ${res.status} ${txt}`);
-          }
-
           log("Payment completed");
           setStatus("Payment successful ✅");
-
-          // Mark payment success (so the next page can check it) and redirect.
-          try { sessionStorage.setItem("pi_payment_success", "1"); } catch (_) {}
-          setTimeout(() => { window.location.href = REDIRECT_AFTER_PAYMENT; }, 600);
         },
 
         onCancel: () => {
@@ -100,14 +80,13 @@
 
         onError: (e) => {
           setStatus("Payment error");
-          log("Payment error: " + (e?.message || e));
+          log("Payment error");
           console.error(e);
         }
       });
     } catch (e) {
       setStatus("Payment failed");
-      log("Payment failed: " + (e?.message || e));
-      console.error(e);
+      log("Payment failed");
     }
   }
 
