@@ -1,12 +1,4 @@
 (function () {
-  // In Pi Sandbox, the app is served under /app/<slug>/... so we must handle a path prefix.
-  function getPathPrefix() {
-    const m = window.location.pathname.match(/^\/app\/[^\/]+/);
-    return m ? m[0] : "";
-  }
-
-  const IS_SANDBOX = window.location.hostname === "sandbox.minepi.com" || window.location.pathname.startsWith("/app/");
-
   async function waitForElement(id) {
     let el = document.getElementById(id);
     while (!el) {
@@ -60,7 +52,7 @@
         log("Signed in: " + auth.user.username);
       } catch (e) {
         setStatus("Sign-in cancelled");
-        log("Sign-in error");
+        log("Sign-in error: " + (e && e.message ? e.message : e)); console.error(e);
       }
     }
 
@@ -90,7 +82,9 @@
             });
             log("Payment completed");
             setStatus("Payment successful ✅");
-window.location.assign(`${getPathPrefix()}/create-video`);
+const m = window.location.pathname.match(/^\/app\/[^/]+/);
+            const prefix = m ? m[0] : "";
+            window.location.assign(`${window.location.origin}${prefix}/create-video`);
           },
 
           onCancel: () => {

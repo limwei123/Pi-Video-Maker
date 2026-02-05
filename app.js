@@ -1,21 +1,24 @@
 const PI_AUTH_SCRIPT_ID = "pi-auth-script";
+const e = React.createElement;
 
-// In Pi Sandbox, the app is served under /app/<slug>/... so we must handle a path prefix.
 function getPathPrefix() {
-  const m = window.location.pathname.match(/^\/app\/[^\/]+/);
+  // Pi Sandbox uses /app/<slug>/... as the visible path
+  const m = window.location.pathname.match(/^\/app\/[^/]+/);
   return m ? m[0] : "";
 }
 
-const e = React.createElement;
+function assetUrl(filename) {
+  const prefix = getPathPrefix();
+  // Ensure assets load correctly both at "/" and under "/app/<slug>"
+  return prefix ? `${prefix}/${filename}` : `/${filename}`;
+}
 
 function loadPiAuthScript() {
-  if (document.getElementById(PI_AUTH_SCRIPT_ID)) {
-    return;
-  }
+  if (document.getElementById(PI_AUTH_SCRIPT_ID)) return;
 
   const script = document.createElement("script");
   script.id = PI_AUTH_SCRIPT_ID;
-  script.src = `${getPathPrefix()}/pi-auth.js`;
+  script.src = assetUrl("pi-auth.js");
   script.async = true;
   document.body.appendChild(script);
 }
@@ -72,9 +75,7 @@ function NotFoundPage() {
 }
 
 function App() {
-  const rawPath = window.location.pathname;
-  const prefix = getPathPrefix();
-  const path = rawPath.startsWith(prefix) ? (rawPath.slice(prefix.length) || "/") : rawPath;
+  const path = window.location.pathname;
 
   if (path === "/") {
     return e(PaymentPage);
@@ -87,5 +88,6 @@ function App() {
   return e(NotFoundPage);
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(e(App));
+const mountEl = document.getElementById("root");
+const root = ReactDOM.createRoot ? ReactDOM.createRoot(mountEl) : null;
+if (root) { root.render(e(App)); } else { ReactDOM.render(e(App), mountEl); }
