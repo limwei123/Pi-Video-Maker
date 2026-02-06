@@ -39,26 +39,121 @@
     <pre id="log"></pre>
   </div>
 
+  
   <!-- CREATE-VIDEO VIEW (redirect target after payment) -->
-  <div id="createView" style="display:none">
-    <h1>Create Your Video</h1>
-    <p id="createStatus" style="opacity:.9"></p>
-
-    <div style="margin-top:14px;padding:12px;border:1px solid rgba(255,255,255,.15);border-radius:10px">
-      <p style="margin:0 0 10px 0;opacity:.9">
-        Your video creation workspace will appear here.
-      </p>
-      <p style="margin:0;opacity:.7;font-size:14px">
-        (This is the redirect page. Plug your real video maker UI here.)
-      </p>
+  <div id="createView" style="display:none;max-width:980px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <h1 style="margin:6px 0 4px 0">One‑Click Product Video Maker</h1>
+        <p style="margin:0;opacity:.85">Generate a promo video for TikTok / Shopee / Lazada in one click (no AI).</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="paidBadge" style="padding:6px 10px;border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:13px;opacity:.9">Paid access: checking…</span>
+        <a href="/" style="color:#9ecbff;text-decoration:none">Back</a>
+      </div>
     </div>
 
-    <div style="margin-top:16px">
-      <a href="/" style="color:#9ecbff;text-decoration:none">← Back to payment</a>
+    <div style="display:grid;grid-template-columns: 1fr 420px;gap:16px;margin-top:14px">
+      <div style="padding:14px;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.03)">
+        <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Product details</h2>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <label style="display:block">
+            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Product name</div>
+            <input id="pName" placeholder="e.g., ALTO Multifunction Watch" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
+          </label>
+
+          <label style="display:block">
+            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Price</div>
+            <input id="pPrice" placeholder="e.g., RM299" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
+          </label>
+
+          <label style="display:block;grid-column:1 / -1">
+            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Promo text (optional)</div>
+            <input id="pPromo" placeholder="e.g., Online Exclusive • Limited Stock" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
+          </label>
+        </div>
+
+        <div style="margin-top:14px">
+          <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Template</h2>
+
+          <div id="tplRow" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <button class="tplBtn" data-tpl="sale" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
+              <div style="font-weight:700">Promo Sale</div>
+              <div style="font-size:12px;opacity:.8">Bold price + CTA</div>
+            </button>
+            <button class="tplBtn" data-tpl="new" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
+              <div style="font-weight:700">New Arrival</div>
+              <div style="font-size:12px;opacity:.8">Launch style</div>
+            </button>
+            <button class="tplBtn" data-tpl="brand" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
+              <div style="font-weight:700">Simple Brand</div>
+              <div style="font-size:12px;opacity:.8">Clean & minimal</div>
+            </button>
+          </div>
+
+          <div style="margin-top:10px;font-size:12px;opacity:.75">
+            Default output: <b>9:16</b> vertical, <b>5 slides</b>, modern clean style.
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Images</h2>
+          <div style="font-size:12px;opacity:.75;margin-bottom:8px">
+            Upload product photos (optional). If you skip, we use built‑in backgrounds.
+          </div>
+          <input id="imgInput" type="file" accept="image/*" multiple />
+          <div id="imgCount" style="margin-top:8px;font-size:12px;opacity:.8">0 images selected</div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
+          <button id="genBtn" style="padding:12px 14px;border-radius:12px;border:0;background:white;color:#0b0b0f;font-weight:800;cursor:pointer">
+            Generate video (1 click)
+          </button>
+          <button id="regenBtn" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:transparent;color:white;font-weight:700;cursor:pointer">
+            Regenerate
+          </button>
+          <span id="genHint" style="font-size:12px;opacity:.75"></span>
+        </div>
+
+        <div id="progressWrap" style="display:none;margin-top:12px">
+          <div style="font-size:12px;opacity:.75;margin-bottom:6px">Generating…</div>
+          <div style="height:10px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden">
+            <div id="progressBar" style="height:100%;width:0%;background:white;border-radius:999px"></div>
+          </div>
+        </div>
+
+        <div id="downloadWrap" style="display:none;margin-top:14px">
+          <a id="downloadLink" download="promo-video.webm"
+             style="display:inline-block;padding:12px 14px;border-radius:12px;border:0;background:#9ecbff;color:#0b0b0f;font-weight:800;text-decoration:none">
+            Download video
+          </a>
+          <div style="margin-top:8px;font-size:12px;opacity:.75">
+            Export format: <b>WEBM</b> (fast, browser-generated). If you need MP4, we can add server-side conversion later.
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:14px;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.03)">
+        <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Preview</h2>
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <canvas id="previewCanvas" width="720" height="1280" style="width:210px;height:374px;border-radius:16px;border:1px solid rgba(255,255,255,.15);background:#111"></canvas>
+          <div style="flex:1;min-width:170px">
+            <div style="font-size:12px;opacity:.75;line-height:1.5">
+              <div><b>Tip:</b> Upload 3–5 product images for best results.</div>
+              <div style="margin-top:6px"><b>Next upgrade:</b> template packs + logo watermark + auto-captions.</div>
+            </div>
+            <div id="supportNote" style="margin-top:12px;font-size:12px;opacity:.7">
+              If download button doesn’t appear, your browser may not support video recording. Try Chrome desktop.
+            </div>
+          </div>
+        </div>
+
+        <video id="previewVideo" controls playsinline style="display:none;margin-top:12px;width:100%;border-radius:16px;border:1px solid rgba(255,255,255,.15)"></video>
+      </div>
     </div>
   </div>
-
-  <script>
+<script>
     // Simple SPA routing (works with vercel.json rewrite)
     (function () {
       var p = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -75,7 +170,7 @@
         var el = document.getElementById("createStatus");
         if (el) {
           el.textContent = paid
-            ? "Redirect successful ✅ (Paid access will be checked by server on sign-in.)"
+            ? "Payment verified (local session) ✅ Redirect successful."
             : "Not verified. Please complete payment first, then you will be redirected here.";
         }
       }
@@ -83,6 +178,349 @@
   </script>
 
   <!-- Keep the same file that handles Pi init + sign-in + payment -->
+
+  <script>
+    // One-click template video generator (NO AI)
+    (function () {
+      const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
+      const isCreate = (path === "/create-video");
+      if (!isCreate) return;
+
+      const paidBadge = document.getElementById("paidBadge");
+      try {
+        const paid = (sessionStorage.getItem("uvm_paid") === "1");
+        if (paidBadge) paidBadge.textContent = paid ? "Paid access: unlocked ✅" : "Paid access: unknown";
+      } catch (_) {}
+
+      const DEFAULTS = {
+        tpl: "sale",
+        slides: 5,
+        size: { w: 720, h: 1280 }, // 9:16
+        fps: 30,
+        slideSeconds: 1.4,
+        transitionSeconds: 0.25,
+      };
+
+      const BG = [
+        ["#0b0b0f", "#1d2b64"],
+        ["#0b0b0f", "#3a1c71"],
+        ["#0b0b0f", "#0f9b0f"],
+        ["#0b0b0f", "#fc4a1a"],
+        ["#0b0b0f", "#1fa2ff"],
+        ["#0b0b0f", "#c31432"],
+      ];
+
+      const els = {
+        canvas: document.getElementById("previewCanvas"),
+        video: document.getElementById("previewVideo"),
+        name: document.getElementById("pName"),
+        price: document.getElementById("pPrice"),
+        promo: document.getElementById("pPromo"),
+        imgInput: document.getElementById("imgInput"),
+        imgCount: document.getElementById("imgCount"),
+        genBtn: document.getElementById("genBtn"),
+        regenBtn: document.getElementById("regenBtn"),
+        hint: document.getElementById("genHint"),
+        progressWrap: document.getElementById("progressWrap"),
+        progressBar: document.getElementById("progressBar"),
+        downloadWrap: document.getElementById("downloadWrap"),
+        downloadLink: document.getElementById("downloadLink"),
+        tplBtns: Array.from(document.querySelectorAll(".tplBtn")),
+      };
+
+      if (!els.canvas || !els.genBtn) return;
+
+      const ctx = els.canvas.getContext("2d");
+      let chosenTpl = DEFAULTS.tpl;
+      let uploadedImages = [];
+
+      function refreshTplUI() {
+        els.tplBtns.forEach(btn => {
+          const active = btn.dataset.tpl === chosenTpl;
+          btn.style.outline = active ? "2px solid #9ecbff" : "none";
+          btn.style.background = active ? "rgba(158,203,255,.18)" : "rgba(0,0,0,.25)";
+        });
+      }
+      els.tplBtns.forEach(btn => btn.addEventListener("click", () => {
+        chosenTpl = btn.dataset.tpl;
+        refreshTplUI();
+        drawPoster();
+      }));
+      refreshTplUI();
+
+      async function readUploads(files) {
+        uploadedImages = [];
+        const arr = Array.from(files || []).slice(0, 10);
+        for (const f of arr) {
+          try {
+            const bmp = await createImageBitmap(f);
+            uploadedImages.push(bmp);
+          } catch (_) {}
+        }
+        if (els.imgCount) els.imgCount.textContent = `${uploadedImages.length} images selected`;
+        drawPoster();
+      }
+      if (els.imgInput) els.imgInput.addEventListener("change", (e) => readUploads(e.target.files));
+
+      function lerp(a,b,t){ return a + (b-a)*t; }
+      function clamp(x,min,max){ return Math.max(min, Math.min(max, x)); }
+
+      function drawGradient(bgPair) {
+        const g = ctx.createLinearGradient(0, 0, 0, els.canvas.height);
+        g.addColorStop(0, bgPair[0]);
+        g.addColorStop(1, bgPair[1]);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, els.canvas.width, els.canvas.height);
+      }
+
+      function drawImageCover(img) {
+        const cw = els.canvas.width, ch = els.canvas.height;
+        const iw = img.width, ih = img.height;
+        const scale = Math.max(cw/iw, ch/ih);
+        const w = iw*scale, h = ih*scale;
+        const x = (cw - w)/2, y = (ch - h)/2;
+        ctx.drawImage(img, x, y, w, h);
+        ctx.fillStyle = "rgba(0,0,0,.28)";
+        ctx.fillRect(0, 0, cw, ch);
+      }
+
+      function textShadow() {
+        ctx.shadowColor = "rgba(0,0,0,.55)";
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 8;
+      }
+      function resetShadow() {
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+
+      function roundRect(c, x, y, w, h, r) {
+        const rr = Math.min(r, w/2, h/2);
+        c.beginPath();
+        c.moveTo(x+rr, y);
+        c.arcTo(x+w, y, x+w, y+h, rr);
+        c.arcTo(x+w, y+h, x, y+h, rr);
+        c.arcTo(x, y+h, x, y, rr);
+        c.arcTo(x, y, x+w, y, rr);
+        c.closePath();
+      }
+
+      function drawBadge(text, x, y) {
+        ctx.save();
+        ctx.font = "700 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        const padX = 22;
+        const w = ctx.measureText(text).width + padX*2;
+        const h = 58;
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        roundRect(ctx, x, y, w, h, 999);
+        ctx.fill();
+        ctx.fillStyle = "#0b0b0f";
+        ctx.fillText(text, x+padX, y+40);
+        ctx.restore();
+      }
+
+      function wrapText(text, x, y, lineH, maxW) {
+        const words = (text || "").split(" ");
+        let line = "";
+        let yy = y;
+        for (const w of words) {
+          const test = line ? (line + " " + w) : w;
+          if (ctx.measureText(test).width > maxW && line) {
+            ctx.fillText(line, x, yy);
+            line = w;
+            yy += lineH;
+          } else {
+            line = test;
+          }
+        }
+        if (line) ctx.fillText(line, x, yy);
+      }
+
+      function drawMainText({title, price, promo, phase=0, opacity=1}) {
+        const cw = els.canvas.width, ch = els.canvas.height;
+        ctx.save();
+        ctx.globalAlpha = opacity;
+
+        textShadow();
+        ctx.fillStyle = "rgba(255,255,255,.96)";
+        ctx.font = "800 64px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        const maxW = cw - 96;
+        wrapText(title, 48, 170 + phase, 72, maxW);
+
+        resetShadow();
+        ctx.fillStyle = "rgba(255,255,255,.85)";
+        ctx.font = "600 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        wrapText(promo, 48, 360 + phase, 38, maxW);
+
+        if (price) {
+          ctx.save();
+          textShadow();
+          drawBadge(price, 48, ch - 250);
+          ctx.restore();
+        }
+
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.font = "800 42px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        ctx.fillText("Tap to Shop Now →", 48, ch - 120);
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      function buildScript() {
+        const title = (els.name?.value || "").trim() || "Product Name";
+        const price = (els.price?.value || "").trim() || "RM99";
+        const promo = (els.promo?.value || "").trim() || "Online Exclusive • Limited Stock";
+
+        if (chosenTpl === "new") {
+          return [
+            { headline: "NEW ARRIVAL", title, price, promo: "Fresh drop • Limited units" },
+            { headline: "WHY YOU'LL LOVE IT", title, price, promo: "Fast shipping • Easy returns" },
+            { headline: "LIMITED STOCK", title, price, promo },
+            { headline: "SPECIAL PRICE", title, price, promo },
+            { headline: "SHOP NOW", title, price, promo: "Tap to order today" },
+          ];
+        }
+        if (chosenTpl === "brand") {
+          return [
+            { headline: "MINIMAL. CLEAN.", title, price, promo: "Everyday essential" },
+            { headline: "DETAILS", title, price, promo: "Premium look • Comfortable" },
+            { headline: "ONLINE ONLY", title, price, promo },
+            { headline: "READY TO SHIP", title, price, promo: "Ships fast" },
+            { headline: "ORDER TODAY", title, price, promo: "Tap to shop now" },
+          ];
+        }
+        return [
+          { headline: "FLASH DEAL", title, price, promo: "Limited time offer" },
+          { headline: "ONLINE EXCLUSIVE", title, price, promo },
+          { headline: "BEST SELLER", title, price, promo: "Stocks moving fast" },
+          { headline: "GRAB IT NOW", title, price, promo: "Before price goes up" },
+          { headline: "CHECKOUT TODAY", title, price, promo: "Tap to shop now" },
+        ];
+      }
+
+      function pickBg(i) { return BG[i % BG.length]; }
+
+      function drawFrame(slide, t, totalT, img) {
+        if (img) {
+          drawImageCover(img);
+        } else {
+          drawGradient(pickBg(slide.index));
+          ctx.fillStyle = "rgba(255,255,255,.04)";
+          for (let k=0;k<18;k++){
+            ctx.beginPath();
+            ctx.arc(lerp(0, els.canvas.width, (k+1)/19), lerp(120, els.canvas.height-120, (k%9)/9), 28, 0, Math.PI*2);
+            ctx.fill();
+          }
+        }
+
+        const cw = els.canvas.width;
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,.35)";
+        roundRect(ctx, 44, 54, cw - 88, 92, 18);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        ctx.fillText(slide.headline, 68, 118);
+        ctx.restore();
+
+        const fade = clamp(t / DEFAULTS.transitionSeconds, 0, 1);
+        const endFade = clamp((DEFAULTS.slideSeconds - t) / DEFAULTS.transitionSeconds, 0, 1);
+        const opacity = Math.min(fade, endFade);
+        const phase = Math.sin((totalT / 0.6)) * 6;
+
+        drawMainText({ title: slide.title, price: slide.price, promo: slide.promo, phase, opacity });
+      }
+
+      function drawPoster() {
+        const script = buildScript();
+        const first = { ...script[0], index: 0 };
+        const img = uploadedImages.length ? uploadedImages[0] : null;
+        drawFrame(first, 0.3, 0.3, img);
+      }
+      drawPoster();
+
+      function setProgress(on, pct=0) {
+        if (!els.progressWrap || !els.progressBar) return;
+        els.progressWrap.style.display = on ? "block" : "none";
+        els.progressBar.style.width = `${pct}%`;
+      }
+      function setHint(msg) { if (els.hint) els.hint.textContent = msg || ""; }
+
+      async function generateVideo() {
+        if (els.downloadWrap) els.downloadWrap.style.display = "none";
+        if (els.video) els.video.style.display = "none";
+
+        setHint("");
+        setProgress(true, 0);
+
+        const script = buildScript();
+        const slides = script.slice(0, DEFAULTS.slides).map((s, i) => ({ ...s, index: i }));
+        const imgs = slides.map((_, i) => uploadedImages.length ? uploadedImages[i % uploadedImages.length] : null);
+
+        const stream = els.canvas.captureStream(DEFAULTS.fps);
+        const mimeCandidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+        const mimeType = mimeCandidates.find(t => MediaRecorder.isTypeSupported(t)) || "video/webm";
+
+        const rec = new MediaRecorder(stream, { mimeType });
+        const chunks = [];
+        rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+
+        const totalSeconds = slides.length * DEFAULTS.slideSeconds;
+        const start = performance.now();
+
+        const stopPromise = new Promise((resolve) => { rec.onstop = () => resolve(); });
+
+        function tick(now) {
+          const elapsed = (now - start) / 1000;
+          const pct = clamp((elapsed / totalSeconds) * 100, 0, 100);
+          setProgress(true, pct);
+
+          const idx = Math.min(slides.length - 1, Math.floor(elapsed / DEFAULTS.slideSeconds));
+          const localT = elapsed - idx * DEFAULTS.slideSeconds;
+          drawFrame(slides[idx], localT, elapsed, imgs[idx]);
+
+          if (elapsed < totalSeconds) requestAnimationFrame(tick);
+          else { try { rec.stop(); } catch (_) {} }
+        }
+
+        rec.start(200);
+        requestAnimationFrame(tick);
+
+        await stopPromise;
+        setProgress(false, 100);
+
+        if (!chunks.length) {
+          setHint("Your browser didn't produce video chunks. Try Chrome desktop.");
+          return;
+        }
+
+        const blob = new Blob(chunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+
+        if (els.video) { els.video.src = url; els.video.style.display = "block"; }
+        if (els.downloadLink) {
+          els.downloadLink.href = url;
+          els.downloadLink.download = "promo-video.webm";
+        }
+        if (els.downloadWrap) els.downloadWrap.style.display = "block";
+
+        setHint("Done ✅ Download your video.");
+      }
+
+      els.genBtn.addEventListener("click", generateVideo);
+      if (els.regenBtn) els.regenBtn.addEventListener("click", generateVideo);
+
+      if (els.name && !els.name.value) els.name.value = "Product Name";
+      if (els.price && !els.price.value) els.price.value = "RM99";
+      if (els.promo && !els.promo.value) els.promo.value = "Online Exclusive • Limited Stock";
+    })();
+  </script>
+
   <script src="./pi-auth.js"></script>
 </body>
 </html>
