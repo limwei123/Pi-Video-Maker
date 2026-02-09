@@ -39,176 +39,26 @@
     <pre id="log"></pre>
   </div>
 
-  
   <!-- CREATE-VIDEO VIEW (redirect target after payment) -->
-  <div id="createView" style="display:none;max-width:980px;margin:0 auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <h1 style="margin:6px 0 4px 0">One‑Click Product Video Maker</h1>
-        <p style="margin:0;opacity:.85">Generate a promo video for TikTok / Shopee / Lazada in one click (no AI).</p>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span id="paidBadge" style="padding:6px 10px;border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:13px;opacity:.9">Paid access: checking…</span>
-        <a href="/" style="color:#9ecbff;text-decoration:none">Back</a>
-      </div>
+  <div id="createView" style="display:none">
+    <h1>Create Your Video</h1>
+    <p id="createStatus" style="opacity:.9"></p>
+
+    <div style="margin-top:14px;padding:12px;border:1px solid rgba(255,255,255,.15);border-radius:10px">
+      <p style="margin:0 0 10px 0;opacity:.9">
+        Your video creation workspace will appear here.
+      </p>
+      <p style="margin:0;opacity:.7;font-size:14px">
+        (This is the redirect page. Plug your real video maker UI here.)
+      </p>
     </div>
 
-    <div style="display:grid;grid-template-columns: 1fr 420px;gap:16px;margin-top:14px">
-      <div style="padding:14px;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.03)">
-        <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Product details</h2>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <label style="display:block">
-            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Product name</div>
-            <input id="pName" placeholder="e.g., ALTO Multifunction Watch" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-          </label>
-
-          <label style="display:block">
-            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Price</div>
-            <input id="pPrice" placeholder="e.g., RM299" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-          </label>
-
-          <label style="display:block;grid-column:1 / -1">
-            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Promo text (optional)</div>
-            <input id="pPromo" placeholder="e.g., Online Exclusive • Limited Stock" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-          </label>
-        <!-- Stage 1: Seller controls -->
-        <div style="margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(0,0,0,.18)">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">Export preset</div>
-              <select id="presetSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-                <option value="tiktok">TikTok/Reels (9:16)</option>
-                <option value="square">Shopee/Lazada (1:1)</option>
-                <option value="youtube">YouTube (16:9)</option>
-              </select>
-            </label>
-
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">Product category</div>
-              <select id="catSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-                <option value="general">General</option>
-                <option value="watch">Watches</option>
-                <option value="beauty">Beauty</option>
-                <option value="home">Home &amp; Household</option>
-                <option value="gadget">Gadgets</option>
-                <option value="fashion">Fashion</option>
-              </select>
-            </label>
-
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">CTA style</div>
-              <select id="ctaSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-                <option value="shop">Tap to Shop Now →</option>
-                <option value="checkout">Checkout Now →</option>
-                <option value="voucher">Claim Voucher →</option>
-                <option value="freeship">Free Shipping →</option>
-                <option value="limited">Limited Stock →</option>
-              </select>
-            </label>
-
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">Logo watermark (optional)</div>
-              <input id="logoInput" type="file" accept="image/*" />
-              <div style="display:flex;gap:10px;align-items:center;margin-top:8px;font-size:12px;opacity:.85">
-                <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
-                  <input type="checkbox" id="logoToggle" checked />
-                  <span>Show logo</span>
-                </label>
-                <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
-                  <input type="checkbox" id="logoCorner" checked />
-                  <span>Top‑right</span>
-                </label>
-              </div>
-            </label>
-          </div>
-          <div style="margin-top:8px;font-size:12px;opacity:.75">
-            Presets set video size + safe text area automatically (seller-ready).
-          </div>
-        </div>
-
-        </div>
-
-        <div style="margin-top:14px">
-          <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Template</h2>
-
-          <div id="tplRow" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-            <button class="tplBtn" data-tpl="sale" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
-              <div style="font-weight:700">Promo Sale</div>
-              <div style="font-size:12px;opacity:.8">Bold price + CTA</div>
-            </button>
-            <button class="tplBtn" data-tpl="new" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
-              <div style="font-weight:700">New Arrival</div>
-              <div style="font-size:12px;opacity:.8">Launch style</div>
-            </button>
-            <button class="tplBtn" data-tpl="brand" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
-              <div style="font-weight:700">Simple Brand</div>
-              <div style="font-size:12px;opacity:.8">Clean & minimal</div>
-            </button>
-          </div>
-
-          <div style="margin-top:10px;font-size:12px;opacity:.75">
-            Default output: <b>9:16</b> vertical, <b>5 slides</b>, modern clean style.
-          </div>
-        </div>
-
-        <div style="margin-top:14px">
-          <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Images</h2>
-          <div style="font-size:12px;opacity:.75;margin-bottom:8px">
-            Upload product photos (optional). If you skip, we use built‑in backgrounds.
-          </div>
-          <input id="imgInput" type="file" accept="image/*" multiple />
-          <div id="imgCount" style="margin-top:8px;font-size:12px;opacity:.8">0 images selected</div>
-        </div>
-
-        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
-          <button id="genBtn" style="padding:12px 14px;border-radius:12px;border:0;background:white;color:#0b0b0f;font-weight:800;cursor:pointer">
-            Generate video (1 click)
-          </button>
-          <button id="regenBtn" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:transparent;color:white;font-weight:700;cursor:pointer">
-            Regenerate
-          </button>
-          <span id="genHint" style="font-size:12px;opacity:.75"></span>
-        </div>
-
-        <div id="progressWrap" style="display:none;margin-top:12px">
-          <div style="font-size:12px;opacity:.75;margin-bottom:6px">Generating…</div>
-          <div style="height:10px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden">
-            <div id="progressBar" style="height:100%;width:0%;background:white;border-radius:999px"></div>
-          </div>
-        </div>
-
-        <div id="downloadWrap" style="display:none;margin-top:14px">
-          <a id="downloadLink" download="promo-video.webm"
-             style="display:inline-block;padding:12px 14px;border-radius:12px;border:0;background:#9ecbff;color:#0b0b0f;font-weight:800;text-decoration:none">
-            Download video
-          </a>
-          <div style="margin-top:8px;font-size:12px;opacity:.75">
-            Export format: <b>WEBM</b> (fast, browser-generated). If you need MP4, we can add server-side conversion later.
-          </div>
-        </div>
-      </div>
-
-      <div style="padding:14px;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.03)">
-        <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Preview</h2>
-        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
-          <canvas id="previewCanvas" width="720" height="1280" style="width:210px;height:374px;border-radius:16px;border:1px solid rgba(255,255,255,.15);background:#111"></canvas>
-          <div style="flex:1;min-width:170px">
-            <div style="font-size:12px;opacity:.75;line-height:1.5">
-              <div><b>Tip:</b> Upload 3–5 product images for best results.</div>
-              <div style="margin-top:6px"><b>Next upgrade:</b> template packs + logo watermark + auto-captions.</div>
-            </div>
-            <div id="supportNote" style="margin-top:12px;font-size:12px;opacity:.7">
-              If download button doesn’t appear, your browser may not support video recording. Try Chrome desktop.
-            </div>
-          </div>
-        </div>
-
-        <video id="previewVideo" controls playsinline style="display:none;margin-top:12px;width:100%;border-radius:16px;border:1px solid rgba(255,255,255,.15)"></video>
-      </div>
+    <div style="margin-top:16px">
+      <a href="/" style="color:#9ecbff;text-decoration:none">← Back to payment</a>
     </div>
   </div>
-<script>
+
+  <script>
     // Simple SPA routing (works with vercel.json rewrite)
     (function () {
       var p = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -235,12 +85,11 @@
   <!-- Keep the same file that handles Pi init + sign-in + payment -->
 
   <script>
-    // Stage 1: One‑click template video generator (NO AI) — seller-ready presets + CTA + logo watermark
+    // Stage 1C: NO‑AI seller video generator — presets + CTA + logo + MUSIC + beat‑sync (Pi auth/payment untouched)
     (function () {
       const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
       if (path !== "/create-video") return;
 
-      // Paid badge (display only; real unlock remains in pi-auth.js + backend)
       const paidBadge = document.getElementById("paidBadge");
       try {
         const paid = (sessionStorage.getItem("uvm_paid") === "1");
@@ -261,6 +110,12 @@
         logoInput: document.getElementById("logoInput"),
         logoToggle: document.getElementById("logoToggle"),
         logoCorner: document.getElementById("logoCorner"),
+
+        musicToggle: document.getElementById("musicToggle"),
+        beatToggle: document.getElementById("beatToggle"),
+        musicStyle: document.getElementById("musicStyle"),
+        musicVol: document.getElementById("musicVol"),
+
         genBtn: document.getElementById("genBtn"),
         regenBtn: document.getElementById("regenBtn"),
         hint: document.getElementById("genHint"),
@@ -299,6 +154,12 @@
         limited: "Limited Stock →",
       };
 
+      const MUSIC = {
+        chill: { bpm: 90,  name: "Chill" },
+        upbeat: { bpm: 120, name: "Upbeat" },
+        cinematic: { bpm: 100, name: "Cinematic" },
+      };
+
       let chosenTpl = DEFAULTS.tpl;
       let uploadedImages = []; // ImageBitmap[]
       let logoBmp = null; // ImageBitmap
@@ -308,7 +169,6 @@
         const p = PRESETS[key] || PRESETS.tiktok;
         els.canvas.width = p.w;
         els.canvas.height = p.h;
-        // keep a consistent on-screen preview size
         els.canvas.style.width = "210px";
         els.canvas.style.height = (210 * (p.h / p.w)) + "px";
       }
@@ -357,6 +217,10 @@
         if (els.name) els.name.addEventListener(evt, drawPoster);
         if (els.price) els.price.addEventListener(evt, drawPoster);
         if (els.promo) els.promo.addEventListener(evt, drawPoster);
+        if (els.musicToggle) els.musicToggle.addEventListener(evt, () => {});
+        if (els.beatToggle) els.beatToggle.addEventListener(evt, () => {});
+        if (els.musicStyle) els.musicStyle.addEventListener(evt, () => {});
+        if (els.musicVol) els.musicVol.addEventListener(evt, () => {});
       }
 
       function lerp(a,b,t){ return a + (b-a)*t; }
@@ -591,6 +455,118 @@
       }
       function setHint(msg){ if (els.hint) els.hint.textContent = msg || ""; }
 
+      function getMusicSettings() {
+        const enabled = !!(els.musicToggle && els.musicToggle.checked);
+        const beatSync = !!(els.beatToggle && els.beatToggle.checked);
+        const styleKey = (els.musicStyle && els.musicStyle.value) ? els.musicStyle.value : "upbeat";
+        const bpm = (MUSIC[styleKey] ? MUSIC[styleKey].bpm : 120);
+        const vol = els.musicVol ? (Number(els.musicVol.value || 35) / 100) : 0.35;
+        return { enabled, beatSync, styleKey, bpm, vol };
+      }
+
+      // Simple in-browser "music" using WebAudio (no external files)
+      function buildAudioTrack(ctxAudio, destination, durationSec, styleKey, volume) {
+        const master = ctxAudio.createGain();
+        master.gain.value = Math.max(0, Math.min(1, volume));
+        master.connect(destination);
+
+        const now = ctxAudio.currentTime;
+        const endAt = now + durationSec;
+
+        // Soft drum tick (kick-ish)
+        function tick(at, freq, gain) {
+          const o = ctxAudio.createOscillator();
+          const g = ctxAudio.createGain();
+          o.type = "sine";
+          o.frequency.setValueAtTime(freq, at);
+          o.frequency.exponentialRampToValueAtTime(Math.max(40, freq*0.6), at + 0.08);
+          g.gain.setValueAtTime(0.0001, at);
+          g.gain.exponentialRampToValueAtTime(gain, at + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+          o.connect(g); g.connect(master);
+          o.start(at);
+          o.stop(at + 0.14);
+        }
+
+        // Simple chord pad
+        function pad(at, freq, dur, gain) {
+          const o = ctxAudio.createOscillator();
+          const g = ctxAudio.createGain();
+          o.type = "triangle";
+          o.frequency.setValueAtTime(freq, at);
+          g.gain.setValueAtTime(0.0001, at);
+          g.gain.exponentialRampToValueAtTime(gain, at + 0.08);
+          g.gain.setValueAtTime(gain, at + Math.max(0.1, dur - 0.08));
+          g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+          o.connect(g); g.connect(master);
+          o.start(at);
+          o.stop(at + dur + 0.02);
+        }
+
+        const bpm = MUSIC[styleKey]?.bpm || 120;
+        const beat = 60 / bpm;
+
+        // Style parameters
+        const style = {
+          chill: { kick: 0.22, pad: 0.10, base: 110 },
+          upbeat: { kick: 0.28, pad: 0.08, base: 130 },
+          cinematic: { kick: 0.24, pad: 0.12, base: 98 },
+        }[styleKey] || { kick: 0.26, pad: 0.09, base: 120 };
+
+        // Progression (relative)
+        const prog = [0, 5, 3, 7]; // I – IV – iii – V-ish
+        const scale = [0, 2, 4, 7, 9]; // pentatonic
+        const rootHz = style.base;
+
+        // Schedule beats and pads
+        let t = now;
+        let bar = 0;
+        while (t < endAt) {
+          // Kick on beat 1 and 3
+          tick(t, 140, style.kick);
+          tick(t + 2*beat, 150, style.kick * 0.95);
+
+          // Pad chord every 4 beats
+          const chord = prog[bar % prog.length];
+          const base = rootHz * Math.pow(2, chord/12);
+          pad(t, base, 4*beat, style.pad);
+          pad(t, base * Math.pow(2, 4/12), 4*beat, style.pad * 0.8);
+          pad(t, base * Math.pow(2, 7/12), 4*beat, style.pad * 0.7);
+
+          // Light melody notes (every beat)
+          for (let i=0; i<4; i++) {
+            const note = scale[(bar + i) % scale.length];
+            const at = t + i*beat;
+            const o = ctxAudio.createOscillator();
+            const g = ctxAudio.createGain();
+            o.type = "sine";
+            o.frequency.setValueAtTime(rootHz * Math.pow(2, (chord + note)/12), at);
+            g.gain.setValueAtTime(0.0001, at);
+            g.gain.exponentialRampToValueAtTime(style.pad * 0.55, at + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.0001, at + beat*0.5);
+            o.connect(g); g.connect(master);
+            o.start(at);
+            o.stop(at + beat*0.55);
+          }
+
+          t += 4*beat;
+          bar += 1;
+        }
+
+        return master;
+      }
+
+      function beatAlignedSlideSeconds(targetSlides, baseSeconds, bpm) {
+        // Make slide duration fall on full beats for "beat sync"
+        const beat = 60 / bpm;
+        // Choose 4 beats per slide (common for snappy ads), but keep within 1.1–2.2 seconds
+        const candidate = 4 * beat;
+        const clamped = Math.max(1.1, Math.min(2.2, candidate));
+        // Keep transition short relative
+        const trans = Math.max(0.18, Math.min(0.30, clamped * 0.18));
+        return { slideSeconds: clamped, transitionSeconds: trans };
+      }
+
       async function generateVideo(){
         if (els.downloadWrap) els.downloadWrap.style.display = "none";
         if (els.video) els.video.style.display = "none";
@@ -599,21 +575,56 @@
         setProgress(true, 0);
 
         setCanvasPreset();
+
         const script = buildScript();
         const slides = script.slice(0, DEFAULTS.slides).map((s,i)=>({ ...s, index:i }));
         const imgs = slides.map((_,i)=> uploadedImages.length ? uploadedImages[i % uploadedImages.length] : null);
 
-        const stream = els.canvas.captureStream(DEFAULTS.fps);
-        const mimeCandidates = ["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
+        const music = getMusicSettings();
+        let slideSeconds = DEFAULTS.slideSeconds;
+        let transitionSeconds = DEFAULTS.transitionSeconds;
+        if (music.beatSync) {
+          const aligned = beatAlignedSlideSeconds(slides.length, DEFAULTS.slideSeconds, music.bpm);
+          slideSeconds = aligned.slideSeconds;
+          transitionSeconds = aligned.transitionSeconds;
+        }
+
+        const totalSeconds = slides.length * slideSeconds;
+
+        // Video stream
+        const canvasStream = els.canvas.captureStream(DEFAULTS.fps);
+
+        // Optional audio stream
+        let mixedStream = canvasStream;
+        let audioCtx = null;
+
+        if (music.enabled) {
+          try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            // must be resumed by user gesture (we are in a click handler)
+            if (audioCtx.state === "suspended") await audioCtx.resume();
+
+            const dest = audioCtx.createMediaStreamDestination();
+            buildAudioTrack(audioCtx, dest, totalSeconds, music.styleKey, music.vol);
+
+            mixedStream = new MediaStream([
+              ...canvasStream.getVideoTracks(),
+              ...dest.stream.getAudioTracks()
+            ]);
+          } catch (e) {
+            // If audio fails, continue video-only
+            mixedStream = canvasStream;
+          }
+        }
+
+        const mimeCandidates = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
         const mimeType = mimeCandidates.find(t => MediaRecorder.isTypeSupported(t)) || "video/webm";
 
-        const rec = new MediaRecorder(stream, { mimeType });
+        const rec = new MediaRecorder(mixedStream, { mimeType });
         const chunks = [];
         rec.ondataavailable = (e)=>{ if (e.data && e.data.size > 0) chunks.push(e.data); };
 
-        const totalSeconds = slides.length * DEFAULTS.slideSeconds;
         const start = performance.now();
-
         const stopPromise = new Promise((resolve)=>{ rec.onstop = () => resolve(); });
 
         function tick(now){
@@ -621,9 +632,19 @@
           const pct = clamp((elapsed / totalSeconds) * 100, 0, 100);
           setProgress(true, pct);
 
-          const idx = Math.min(slides.length - 1, Math.floor(elapsed / DEFAULTS.slideSeconds));
-          const localT = elapsed - idx * DEFAULTS.slideSeconds;
+          const idx = Math.min(slides.length - 1, Math.floor(elapsed / slideSeconds));
+          const localT = elapsed - idx * slideSeconds;
+
+          // Temporarily override transition seconds for this render
+          const oldSlide = DEFAULTS.slideSeconds;
+          const oldTrans = DEFAULTS.transitionSeconds;
+          DEFAULTS.slideSeconds = slideSeconds;
+          DEFAULTS.transitionSeconds = transitionSeconds;
+
           drawFrame(slides[idx], localT, elapsed, imgs[idx]);
+
+          DEFAULTS.slideSeconds = oldSlide;
+          DEFAULTS.transitionSeconds = oldTrans;
 
           if (elapsed < totalSeconds) requestAnimationFrame(tick);
           else { try { rec.stop(); } catch (_) {} }
@@ -635,6 +656,10 @@
 
         setProgress(false, 100);
 
+        if (audioCtx) {
+          try { await audioCtx.close(); } catch (_) {}
+        }
+
         if (!chunks.length) { setHint("Your browser didn't produce video chunks. Try Chrome desktop."); return; }
 
         const blob = new Blob(chunks, { type: mimeType });
@@ -644,20 +669,21 @@
         if (els.downloadLink) { els.downloadLink.href = url; els.downloadLink.download = "promo-video.webm"; }
         if (els.downloadWrap) els.downloadWrap.style.display = "block";
 
-        setHint("Done ✅ Download your video.");
+        setHint(music.enabled ? "Done ✅ Video + music exported." : "Done ✅ Download your video.");
       }
 
       function init(){
-        // Defaults for true 1-click
         if (els.name && !els.name.value) els.name.value = "Product Name";
         if (els.price && !els.price.value) els.price.value = "RM99";
         if (els.promo && !els.promo.value) els.promo.value = "Online Exclusive • Limited Stock";
         if (els.preset && !els.preset.value) els.preset.value = "tiktok";
         if (els.category && !els.category.value) els.category.value = "general";
         if (els.cta && !els.cta.value) els.cta.value = "shop";
+        if (els.musicStyle && !els.musicStyle.value) els.musicStyle.value = "upbeat";
 
         setCanvasPreset();
         drawPoster();
+
         els.genBtn.addEventListener("click", generateVideo);
         if (els.regenBtn) els.regenBtn.addEventListener("click", generateVideo);
       }
