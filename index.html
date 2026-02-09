@@ -331,6 +331,165 @@
         fashion: [["#0b0b0f","#ee0979"],["#0b0b0f","#ff6a00"],["#0b0b0f","#4568dc"]],
       };
 
+      // ------------------------------
+      // Stage 2A: Built‑in Background Library (NO uploads needed)
+      // We use procedural backgrounds (drawn on canvas) so there is:
+      // - no external hosting
+      // - no licensing issues
+      // - still looks like a "library"
+      // ------------------------------
+      function mulberry32(seed) {
+        let a = seed >>> 0;
+        return function () {
+          a |= 0; a = (a + 0x6D2B79F5) | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function hashSeed(str) {
+        let h = 2166136261;
+        for (let i = 0; i < str.length; i++) {
+          h ^= str.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return h >>> 0;
+      }
+
+      function drawStudio(rand) {
+        const w = els.canvas.width, h = els.canvas.height;
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, "rgba(255,255,255,0.10)");
+        g.addColorStop(1, "rgba(255,255,255,0.02)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = "rgba(255,255,255,0.06)";
+        ctx.fillRect(0, Math.round(h*0.70), w, Math.round(h*0.30));
+
+        const cx = w * (0.35 + rand()*0.30);
+        const cy = h * (0.30 + rand()*0.15);
+        const rg = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(w,h)*0.75);
+        rg.addColorStop(0, "rgba(255,255,255,0.14)");
+        rg.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = rg;
+        ctx.fillRect(0,0,w,h);
+      }
+
+      function drawSaleBurst(rand, accent) {
+        const w = els.canvas.width, h = els.canvas.height;
+        drawGradient(accent);
+
+        const cx = w * (0.45 + rand()*0.10);
+        const cy = h * (0.35 + rand()*0.10);
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        const rays = 18;
+        for (let i=0; i<rays; i++){
+          const wRay = Math.max(w,h) * 0.08;
+          const len = Math.max(w,h) * 1.2;
+          ctx.rotate((Math.PI*2)/rays);
+          ctx.fillStyle = i%2===0 ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+          ctx.beginPath();
+          ctx.moveTo(0,0);
+          ctx.lineTo(wRay, len);
+          ctx.lineTo(-wRay, len);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+
+        for (let i=0; i<60; i++){
+          const x = rand()*w, y = rand()*h;
+          const s = 3 + rand()*6;
+          ctx.fillStyle = `rgba(255,255,255,${0.05 + rand()*0.12})`;
+          ctx.fillRect(x, y, s, s);
+        }
+      }
+
+      function drawBokeh(rand, accent) {
+        const w = els.canvas.width, h = els.canvas.height;
+        drawGradient(accent);
+        for (let i=0; i<22; i++){
+          const r = Math.min(w,h) * (0.04 + rand()*0.12);
+          const x = rand()*w;
+          const y = rand()*h;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, `rgba(255,255,255,${0.08 + rand()*0.10})`);
+          g.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x,y,r,0,Math.PI*2);
+          ctx.fill();
+        }
+      }
+
+      function drawDeskLifestyle(rand) {
+        const w = els.canvas.width, h = els.canvas.height;
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, "rgba(10,12,18,1)");
+        g.addColorStop(1, "rgba(20,28,44,1)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0,0,w,h);
+
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = "#ffffff";
+        ctx.translate(-w*0.2, h*0.1);
+        ctx.rotate(-Math.PI/10);
+        ctx.fillRect(0,0,w*1.6,h*0.18);
+        ctx.restore();
+
+        ctx.fillStyle = "rgba(255,255,255,0.05)";
+        ctx.fillRect(0, Math.round(h*0.72), w, Math.round(h*0.28));
+
+        ctx.fillStyle = "rgba(255,255,255,0.03)";
+        for (let i=0; i<90; i++){
+          ctx.fillRect(rand()*w, rand()*h, 1, 1);
+        }
+      }
+
+      function drawPremiumMetal(rand, accent) {
+        const w = els.canvas.width, h = els.canvas.height;
+        drawGradient(accent);
+
+        for (let i=0; i<6; i++){
+          const x = (i/6)*w + (rand()-0.5)*w*0.08;
+          const g = ctx.createLinearGradient(x - w*0.25, 0, x + w*0.25, h);
+          g.addColorStop(0, "rgba(255,255,255,0)");
+          g.addColorStop(0.5, "rgba(255,255,255,0.10)");
+          g.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(0,0,w,h);
+        }
+      }
+
+      function getBgPack(cat) {
+        if (cat === "watch") return ["premium", "studio", "sale"];
+        if (cat === "beauty") return ["bokeh", "studio", "sale"];
+        if (cat === "home") return ["studio", "lifestyle", "sale"];
+        if (cat === "gadget") return ["lifestyle", "premium", "sale"];
+        if (cat === "fashion") return ["bokeh", "lifestyle", "sale"];
+        return ["studio", "lifestyle", "sale"];
+      }
+
+      function drawBuiltInBackground(cat, slideIndex, rand) {
+        const accent = pickBg(slideIndex);
+        const pack = getBgPack(cat);
+        const mode = pack[slideIndex % pack.length];
+
+        if (mode === "studio") return drawStudio(rand);
+        if (mode === "lifestyle") return drawDeskLifestyle(rand);
+        if (mode === "sale") return drawSaleBurst(rand, accent);
+        if (mode === "bokeh") return drawBokeh(rand, accent);
+        if (mode === "premium") return drawPremiumMetal(rand, accent);
+
+        drawGradient(accent);
+      }
+
+
       const CTA_TEXT = {
         shop: "Tap to Shop Now →",
         checkout: "Checkout Now →",
@@ -545,21 +704,13 @@
         return arr[i % arr.length];
       }
 
-      function drawFrame(slide, t, totalT, img, transitionSeconds, slideSeconds){
+      function drawFrame(slide, t, totalT, img, transitionSeconds, slideSeconds, rand){
         if (img) drawImageCover(img);
         else {
-          drawGradient(pickBg(slide.index));
-          ctx.fillStyle = "rgba(255,255,255,.04)";
-          for (let k=0; k<18; k++){
-            ctx.beginPath();
-            ctx.arc(
-              lerp(0, els.canvas.width, (k+1)/19),
-              lerp(120, els.canvas.height-120, (k%9)/9),
-              Math.round(Math.min(els.canvas.width, els.canvas.height)*0.03),
-              0, Math.PI*2
-            );
-            ctx.fill();
-          }
+          const cat = (els.category && els.category.value) ? els.category.value : "general";
+          drawBuiltInBackground(cat, slide.index, rand);
+        }
+
         }
 
         const { left, right, top, bottom } = safeMargins();
@@ -626,7 +777,10 @@
         const s = buildScript();
         const first = { ...s[0], index: 0 };
         const img = uploadedImages.length ? uploadedImages[0] : null;
-        drawFrame(first, 0.3, 0.3, img, DEFAULTS.transitionSeconds, DEFAULTS.slideSeconds);
+        const cat = (els.category && els.category.value) ? els.category.value : "general";
+        const seed = hashSeed(cat + "|" + (els.name?.value||"") + "|" + (els.price?.value||"") + "|poster");
+        const rand = mulberry32(seed);
+        drawFrame(first, 0.3, 0.3, img, DEFAULTS.transitionSeconds, DEFAULTS.slideSeconds, rand);
       }
 
       function setProgress(on, pct){
@@ -801,7 +955,7 @@
           const idx = Math.min(slides.length - 1, Math.floor(elapsed / slideSeconds));
           const localT = elapsed - idx * slideSeconds;
 
-          drawFrame(slides[idx], localT, elapsed, imgs[idx], transitionSeconds, slideSeconds);
+          drawFrame(slides[idx], localT, elapsed, imgs[idx], transitionSeconds, slideSeconds, rand);
 
           if (elapsed < totalSeconds) requestAnimationFrame(tick);
           else { try { rec.stop(); } catch (_) {} }
