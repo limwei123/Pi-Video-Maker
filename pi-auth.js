@@ -14,7 +14,7 @@
   // Extra guard: if required DOM is missing, do nothing.
   if (!statusEl || !logEl || !signInBtn || !payBtn || !userLine) return;
 
-  const BACKEND = (localStorage.getItem("UVM_BACKEND") || "https://pi-payments-backend.vercel.app");
+  const BACKEND = "https://pi-payments-backend.vercel.app";
 
   let currentUsername = null;
 
@@ -36,7 +36,8 @@
     // requirement #1: Pi SDK ready
     // requirement #2: Pi sign-in available
     // requirement #3: Pi payment available
-    Pi.init({ version: "2.0", sandbox: true });
+    const isSandboxHost = /(^|\.)sandbox\.minepi\.com$/i.test(window.location.hostname);
+  Pi.init({ version: "2.0", sandbox: isSandboxHost });
 
     signInBtn.disabled = false;
     payBtn.disabled = true;
@@ -78,11 +79,8 @@
       if (currentUsername) {
         const paid = await checkPaid(currentUsername);
         if (paid) {
-          setStatus("Already paid ✅ Preparing access…");
-          sessionStorage.setItem("uvm_paid", "1");
-          const token = await issueAccessKey(currentUsername);
-          if (token) { storeAccessKey(token); showAccessKey(token); }
           setStatus("Already paid ✅ Redirecting…");
+          sessionStorage.setItem("uvm_paid", "1");
           window.location.assign("/create-video");
           return;
         }
@@ -97,36 +95,6 @@
       payBtn.disabled = true;
     }
   }
-
-  async function issueAccessKey(username) {
-    try {
-      const res = await fetch(`${BACKEND}/api/access/issue`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
-      });
-      if (!res.ok) return null;
-      const data = await res.json().catch(() => ({}));
-      const token = data && (data.token || data.accessToken || data.key);
-      return token || null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function storeAccessKey(token) {
-    if (!token) return;
-    try { localStorage.setItem("uvm_access", token); } catch (_) {}
-  }
-
-  function showAccessKey(token) {
-    if (!token) return;
-    try {
-      log("Access Key (for Chrome): " + token);
-      log("Tip: Open the same app URL in Chrome and paste this key if asked.");
-    } catch (_) {}
-  }
-
 
   async function pay() {
     if (!currentUsername) {
@@ -162,9 +130,6 @@
 
             // Save paid user in KV (one-time unlock)
             await markPaid(currentUsername, paymentId, txid);
-
-            const token = await issueAccessKey(currentUsername);
-            if (token) { storeAccessKey(token); showAccessKey(token); }
 
             log("Payment completed");
             setStatus("Payment successful ✅");
