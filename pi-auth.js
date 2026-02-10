@@ -1,288 +1,199 @@
-
-/*
-  Pi Auth + Pay once unlock
-
-  Requirements:
-  1) Pi SDK ready
-  2) Sign in
-  3) Payment approve/complete via your backend
-  4) Payment saved (one time) using your backend (Upstash KV) + local fallback
-
-  Backend endpoints expected:
-   - POST {BACKEND}/api/user/status        body: { username } -> { paid: boolean }
-   - POST {BACKEND}/api/user/mark-paid     body: { username } -> { ok: true }
-   - POST {BACKEND}/api/pi/approve         body: { paymentId, txid } OR per your existing code
-   - POST {BACKEND}/api/pi/complete        body: { paymentId, txid } OR per your existing code
-
-  If you already deployed a backend, set it once:
-    localStorage.setItem("UVM_BACKEND", "https://YOUR-BACKEND.vercel.app");
-*/
-
 (function () {
-  const STATUS_EL = () => document.getElementById("status");
-  const USERLINE_EL = () => document.getElementById("userLine");
-  const PAIDLINE_EL = () => document.getElementById("paidLine");
-  const LOG_EL = () => document.getElementById("log");
-  const SIGNIN_BTN = () => document.getElementById("signinBtn");
-  const PAY_BTN = () => document.getElementById("payBtn");
+  // Only run Pi auth/payment logic on the payment page ("/")
+  // so the redirect page ("/create-video") doesn't break.
+  const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
+  const isPaymentPage = (path === "/");
+  if (!isPaymentPage) return;
 
-  function setStatusDot(ok, bad){
-    const el = STATUS_EL();
-    if (!el) return;
-    const dot = el.querySelector(".dot");
-    if (!dot) return;
-    dot.classList.remove("ok","bad");
-    if (ok) dot.classList.add("ok");
-    if (bad) dot.classList.add("bad");
+  const statusEl = document.getElementById("status");
+  const logEl = document.getElementById("log");
+  const signInBtn = document.getElementById("signinBtn");
+  const payBtn = document.getElementById("payBtn");
+  const userLine = document.getElementById("userLine");
+
+  // Extra guard: if required DOM is missing, do nothing.
+  if (!statusEl || !logEl || !signInBtn || !payBtn || !userLine) return;
+
+  const BACKEND = (localStorage.getItem("UVM_BACKEND") || "https://pi-payments-backend.vercel.app");
+
+  let currentUsername = null;
+
+  function log(msg) {
+    logEl.textContent += msg + "\n";
   }
 
-  function setStatusText(text){
-    const el = STATUS_EL();
-    if (!el) return;
-    const spans = el.querySelectorAll("span");
-    if (spans.length >= 2) spans[1].textContent = text;
+  function setStatus(msg) {
+    statusEl.textContent = msg;
   }
 
-  function log(msg){
-    const el = LOG_EL();
-    if (!el) return;
-    el.textContent = (el.textContent ? el.textContent + "\n" : "") + msg;
+  async function waitForPi() {
+    while (!window.Pi) await new Promise((r) => setTimeout(r, 100));
   }
 
-  function getBackend(){
-    const fromLS = localStorage.getItem("UVM_BACKEND");
-    if (fromLS) return fromLS;
-    // fallback guess - user can override in LS
-    return "https://pi-payments-backend.vercel.app";
+  async function init() {
+    await waitForPi();
+
+    // requirement #1: Pi SDK ready
+    // requirement #2: Pi sign-in available
+    // requirement #3: Pi payment available
+    Pi.init({ version: "2.0", sandbox: true });
+
+    signInBtn.disabled = false;
+    payBtn.disabled = true;
+
+    setStatus("Pi SDK ready");
+    log("Pi SDK ready");
   }
 
-  async function postJSON(url, body){
-    const res = await fetch(url, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify(body || {})
+  async function checkPaid(username) {
+    const res = await fetch(`${BACKEND}/api/user/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
     });
-    const txt = await res.text();
-    let data = null;
-    try{ data = JSON.parse(txt); } catch(e){}
-    if (!res.ok){
-      const msg = data?.error || data?.message || txt || ("HTTP " + res.status);
-      throw new Error(msg);
+    const data = await res.json().catch(() => ({}));
+    return !!data.paid;
+  }
+
+  async function markPaid(username, paymentId, txid) {
+    await fetch(`${BACKEND}/api/user/mark-paid`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, paymentId, txid }),
+    }).catch(() => {});
+  }
+
+  async function signIn() {
+    setStatus("Signing in…");
+
+    try {
+      const auth = await Pi.authenticate(["username", "payments"], () => {});
+      currentUsername = auth?.user?.username || null;
+
+      userLine.textContent = "Signed in as: " + (currentUsername || "(unknown)");
+      log("Signed in: " + (currentUsername || "(unknown)"));
+
+      // Server-enforced one-time payment check
+      setStatus("Checking payment status…");
+      if (currentUsername) {
+        const paid = await checkPaid(currentUsername);
+        if (paid) {
+          setStatus("Already paid ✅ Preparing access…");
+          sessionStorage.setItem("uvm_paid", "1");
+          const token = await issueAccessKey(currentUsername);
+          if (token) { storeAccessKey(token); showAccessKey(token); }
+          setStatus("Already paid ✅ Redirecting…");
+          window.location.assign("/create-video");
+          return;
+        }
+      }
+
+      setStatus("Not paid yet — please proceed with payment");
+      payBtn.disabled = false;
+    } catch (e) {
+      setStatus("Sign-in cancelled");
+      log("Sign-in error/cancel");
+      currentUsername = null;
+      payBtn.disabled = true;
     }
-    return data || {};
   }
 
-  function showPaidUI(){
-    const paidLine = PAIDLINE_EL();
-    if (paidLine) paidLine.style.display = "inline-flex";
-    const payBtn = PAY_BTN();
-    if (payBtn) payBtn.disabled = true;
-  }
-
-  function setUser(username){
-    const el = USERLINE_EL();
-    if (el) el.textContent = username ? ("Signed in as: " + username) : "Not signed in";
-  }
-
-  function enableSignIn(){
-    const btn = SIGNIN_BTN();
-    if (btn) btn.disabled = false;
-  }
-
-  function enablePay(enable){
-    const btn = PAY_BTN();
-    if (btn) btn.disabled = !enable;
-  }
-
-  // ---- Main flow ----
-
-  async function waitForPiSDK(){
-    setStatusText("Loading Pi SDK…");
-    for (let i=0;i<80;i++){
-      if (window.Pi && typeof window.Pi.init === "function") return true;
-      await new Promise(r=>setTimeout(r, 100));
+  async function issueAccessKey(username) {
+    try {
+      const res = await fetch(`${BACKEND}/api/access/issue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json().catch(() => ({}));
+      const token = data && (data.token || data.accessToken || data.key);
+      return token || null;
+    } catch (e) {
+      return null;
     }
-    return false;
   }
 
-  async function checkPaid(username){
-    // local fallback
-    const localKey = "UVM_PAID_" + username;
-    if (localStorage.getItem(localKey) === "1") return true;
-
-    const backend = getBackend();
-    const data = await postJSON(backend + "/api/user/status", { username });
-    if (data && data.paid){
-      localStorage.setItem(localKey, "1");
-      return true;
-    }
-    return false;
+  function storeAccessKey(token) {
+    if (!token) return;
+    try { localStorage.setItem("uvm_access", token); } catch (_) {}
   }
 
-  async function markPaid(username){
-    const backend = getBackend();
-    await postJSON(backend + "/api/user/mark-paid", { username });
-    const localKey = "UVM_PAID_" + username;
-    localStorage.setItem(localKey, "1");
+  function showAccessKey(token) {
+    if (!token) return;
+    try {
+      log("Access Key (for Chrome): " + token);
+      log("Tip: Open the same app URL in Chrome and paste this key if asked.");
+    } catch (_) {}
   }
 
-  async function init(){
-    const ok = await waitForPiSDK();
-    if (!ok){
-      setStatusDot(false, true);
-      setStatusText("Pi SDK failed to load.");
-      log("Pi SDK not ready. Check internet / Pi Browser.");
+
+  async function pay() {
+    if (!currentUsername) {
+      setStatus("Please sign in first");
       return;
     }
 
-    window.Pi.init({ version: "2.0" });
-    setStatusDot(true, false);
-    setStatusText("Pi SDK ready ✅");
-    enableSignIn();
+    setStatus("Creating payment…");
 
-    // If already signed in this session, restore
-    const savedUser = sessionStorage.getItem("UVM_USER");
-    if (savedUser){
-      setUser(savedUser);
-      try{
-        const paid = await checkPaid(savedUser);
-        if (paid){
-          showPaidUI();
-          setStatusText("Paid access: unlocked ✅");
-          // If user is on /, we can auto redirect
-          if (window.location.pathname === "/") {
-            setTimeout(()=>{ window.location.href = "/create-video"; }, 400);
-          }
-        } else {
-          setStatusText("Signed in. Payment required.");
-          enablePay(true);
+    try {
+      await Pi.createPayment(
+        {
+          amount: 1,
+          memo: "Ultra Video Maker Payment",
+          metadata: { app: "UltraVideoMaker", username: currentUsername },
+        },
+        {
+          onReadyForServerApproval: async (paymentId) => {
+            await fetch(`${BACKEND}/api/pi/approve`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId }),
+            });
+            log("Payment approved");
+          },
+
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            await fetch(`${BACKEND}/api/pi/complete`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid }),
+            });
+
+            // Save paid user in KV (one-time unlock)
+            await markPaid(currentUsername, paymentId, txid);
+
+            const token = await issueAccessKey(currentUsername);
+            if (token) { storeAccessKey(token); showAccessKey(token); }
+
+            log("Payment completed");
+            setStatus("Payment successful ✅");
+
+            // Redirect AFTER successful completion
+            sessionStorage.setItem("uvm_paid", "1");
+            window.location.assign("/create-video");
+          },
+
+          onCancel: () => {
+            setStatus("Payment cancelled");
+            log("Payment cancelled");
+          },
+
+          onError: (e) => {
+            setStatus("Payment error");
+            log("Payment error");
+            console.error(e);
+          },
         }
-      }catch(e){
-        setStatusText("Signed in. (Cannot verify paid status)");
-        enablePay(true);
-        log("Status check failed: " + e.message);
-      }
+      );
+    } catch (e) {
+      setStatus("Payment failed");
+      log("Payment failed");
     }
   }
 
-  async function signIn(){
-    try{
-      setStatusText("Signing in…");
-      const auth = await window.Pi.authenticate(["username"], (payment) => {
-        // onIncompletePaymentFound - we could handle retries here
-        log("Found incomplete payment: " + JSON.stringify(payment));
-      });
-
-      const username = auth?.user?.username || auth?.user?.uid || auth?.username;
-      if (!username) throw new Error("No username returned from Pi.");
-      sessionStorage.setItem("UVM_USER", username);
-      setUser(username);
-
-      // Save token if present (optional)
-      if (auth?.accessToken) sessionStorage.setItem("UVM_ACCESS_TOKEN", auth.accessToken);
-
-      // Check paid
-      try{
-        const paid = await checkPaid(username);
-        if (paid){
-          showPaidUI();
-          setStatusText("Paid access: unlocked ✅");
-          if (window.location.pathname === "/") window.location.href = "/create-video";
-        } else {
-          setStatusText("Signed in ✅ Payment required.");
-          enablePay(true);
-        }
-      }catch(e){
-        setStatusText("Signed in ✅ (status check failed)");
-        enablePay(true);
-        log("Status check failed: " + e.message);
-      }
-    }catch(e){
-      setStatusDot(false, true);
-      setStatusText("Sign-in failed.");
-      log("Sign-in error: " + e.message);
-    }
-  }
-
-  async function pay(){
-    try{
-      const username = sessionStorage.getItem("UVM_USER");
-      if (!username){
-        setStatusText("Please sign in first.");
-        return;
-      }
-
-      // Final re-check: if already paid, don't charge again
-      try{
-        const paid = await checkPaid(username);
-        if (paid){
-          showPaidUI();
-          setStatusText("Already unlocked ✅");
-          window.location.href = "/create-video";
-          return;
-        }
-      }catch(e){}
-
-      setStatusText("Opening Pi payment…");
-      enablePay(false);
-
-      const paymentData = {
-        amount: 1,
-        memo: "Ultra Video Maker unlock (one-time)",
-        metadata: { productId: "uvm_unlock_v1", username }
-      };
-
-      const backend = getBackend();
-
-      const payment = await window.Pi.createPayment(paymentData, {
-        onReadyForServerApproval: async (paymentId) => {
-          log("PaymentId: " + paymentId + " (approve)");
-          await postJSON(backend + "/api/pi/approve", { paymentId, username });
-        },
-        onReadyForServerCompletion: async (paymentId, txid) => {
-          log("PaymentId: " + paymentId + " (complete) txid=" + txid);
-          await postJSON(backend + "/api/pi/complete", { paymentId, txid, username });
-
-          // Mark paid in KV (our own record)
-          await markPaid(username);
-
-          setStatusDot(true, false);
-          setStatusText("Payment verified ✅ Redirecting…");
-          showPaidUI();
-          setTimeout(()=>{ window.location.href = "/create-video"; }, 500);
-        },
-        onCancel: (paymentId) => {
-          setStatusText("Payment cancelled.");
-          enablePay(true);
-          log("Cancelled: " + paymentId);
-        },
-        onError: (err, payment) => {
-          setStatusDot(false, true);
-          setStatusText("Payment error.");
-          enablePay(true);
-          log("Payment error: " + (err?.message || String(err)));
-          if (payment) log("Payment: " + JSON.stringify(payment));
-        },
-      });
-
-      // In some SDK versions, createPayment returns immediately; callbacks handle the rest.
-      log("Payment started.");
-    }catch(e){
-      setStatusDot(false, true);
-      setStatusText("Payment failed.");
-      enablePay(true);
-      log("Payment exception: " + e.message);
-    }
-  }
-
-  // Hook buttons
   window.__piSignInClick = signIn;
   window.__piPayClick = pay;
 
-  // Start init when DOM ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  init();
 })();
