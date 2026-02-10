@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ultra Video Maker</title>
 
+  <!-- Pi SDK (must stay) -->
   <script>
-    // Load Pi SDK ASAP (requirement #1: Pi SDK ready)
     (function () {
       if (window.Pi) return;
       var s = document.createElement('script');
@@ -15,888 +15,101 @@
       document.head.appendChild(s);
     })();
   </script>
+
+  <!-- React via CDN (no build step) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b0b0f;
+      --card:#12121a;
+      --muted:#a7a7b4;
+      --accent:#7c3aed;
+      --ok:#22c55e;
+      --danger:#ef4444;
+      --border:rgba(255,255,255,.10);
+      --shadow: 0 12px 28px rgba(0,0,0,.45);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:#fff;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    a{color:#c4b5fd}
+    .wrap{max-width:980px;margin:0 auto;padding:18px 14px 44px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .brand{display:flex;gap:10px;align-items:center}
+    .chip{font-size:12px;color:#d1d5db;border:1px solid var(--border);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.03)}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    @media (min-width: 940px){.grid{grid-template-columns: 1.1fr .9fr}}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+    h1{font-size:28px;margin:0 0 2px}
+    h2{font-size:16px;margin:0 0 10px}
+    .muted{color:var(--muted)}
+    .row{display:grid;grid-template-columns:1fr;gap:10px}
+    @media (min-width: 560px){.row{grid-template-columns:1fr 1fr}}
+    label{display:block;font-size:12px;color:#d1d5db;margin:0 0 6px}
+    input, select, textarea{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.25);
+      color:#fff;
+      outline:none;
+    }
+    textarea{min-height:70px;resize:vertical}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      padding:11px 14px;border-radius:12px;border:1px solid var(--border);
+      background:rgba(255,255,255,.06);color:#fff;cursor:pointer;
+      font-weight:600;
+    }
+    .btn.primary{background:var(--accent);border-color:rgba(124,58,237,.45)}
+    .btn.ghost{background:transparent}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btnRow{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .statusLine{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}
+    .dot{width:10px;height:10px;border-radius:999px;background:var(--muted)}
+    .dot.ok{background:var(--ok)}
+    .dot.bad{background:var(--danger)}
+    .previewBox{display:grid;gap:10px}
+    .stage{
+      width:100%;
+      aspect-ratio: 9 / 16;
+      background:#07070b;
+      border:1px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+      position:relative;
+    }
+    video, canvas{width:100%;height:100%;display:block}
+    .help{font-size:12px;color:var(--muted);line-height:1.35}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.03);font-size:12px;color:#e5e7eb}
+    .log{
+      background:rgba(0,0,0,.35);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size:12px;
+      color:#cbd5e1;
+      max-height:160px;
+      overflow:auto;
+      white-space:pre-wrap;
+    }
+  </style>
 </head>
 
-<body style="background:#0b0b0f;color:white;font-family:sans-serif;padding:16px">
-  <!-- PAYMENT VIEW -->
-  <div id="paymentView">
-    <h1>Ultra Video Maker</h1>
+<body>
+  <div id="root"></div>
 
-    <div id="status">Loading…</div>
-
-    <button id="signinBtn" onclick="window.__piSignInClick && window.__piSignInClick()" disabled>
-      Sign in with Pi
-    </button>
-
-    <br><br>
-
-    <button id="payBtn" onclick="window.__piPayClick && window.__piPayClick()" disabled>
-      Pay with Pi (1 Pi)
-    </button>
-
-    <p id="userLine">Not signed in</p>
-
-    <pre id="log"></pre>
-  </div>
-
-  
-  <!-- CREATE-VIDEO VIEW (redirect target after payment) -->
-  <div id="createView" style="display:none;max-width:980px;margin:0 auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <h1 style="margin:6px 0 4px 0">One‑Click Product Video Maker</h1>
-        <p style="margin:0;opacity:.85">Generate a promo video for TikTok / Shopee / Lazada in one click (no AI).</p>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span id="paidBadge" style="padding:6px 10px;border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:13px;opacity:.9">Paid access: checking…</span>
-        <a href="/" style="color:#9ecbff;text-decoration:none">Back</a>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns: 1fr 420px;gap:16px;margin-top:14px">
-      <div style="padding:14px;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.03)">
-        <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Product details</h2>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <label style="display:block">
-            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Product name</div>
-            <input id="pName" placeholder="e.g., ALTO Multifunction Watch" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-          </label>
-
-          <label style="display:block">
-            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Price</div>
-            <input id="pPrice" placeholder="e.g., RM299" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-          </label>
-
-          <label style="display:block;grid-column:1 / -1">
-            <div style="font-size:13px;opacity:.85;margin-bottom:6px">Promo text (optional)</div>
-            <input id="pPromo" placeholder="e.g., Online Exclusive • Limited Stock" style="width:100%;padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-          </label>
-        <!-- Stage 1: Seller controls -->
-        <div style="margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(0,0,0,.18)">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">Export preset</div>
-              <select id="presetSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-                <option value="tiktok">TikTok/Reels (9:16)</option>
-                <option value="square">Shopee/Lazada (1:1)</option>
-                <option value="youtube">YouTube (16:9)</option>
-              </select>
-            </label>
-
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">Product category</div>
-              <select id="catSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-                <option value="general">General</option>
-                <option value="watch">Watches</option>
-                <option value="beauty">Beauty</option>
-                <option value="home">Home &amp; Household</option>
-                <option value="gadget">Gadgets</option>
-                <option value="fashion">Fashion</option>
-              </select>
-            </label>
-
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">CTA style</div>
-              <select id="ctaSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-                <option value="shop">Tap to Shop Now →</option>
-                <option value="checkout">Checkout Now →</option>
-                <option value="voucher">Claim Voucher →</option>
-                <option value="freeship">Free Shipping →</option>
-                <option value="limited">Limited Stock →</option>
-              </select>
-            </label>
-
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">Logo watermark (optional)</div>
-              <input id="logoInput" type="file" accept="image/*" />
-              <div style="display:flex;gap:10px;align-items:center;margin-top:8px;font-size:12px;opacity:.85">
-                <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
-                  <input type="checkbox" id="logoToggle" checked />
-                  <span>Show logo</span>
-                </label>
-                <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
-                  <input type="checkbox" id="logoCorner" checked />
-                  <span>Top‑right</span>
-                </label>
-              </div>
-            </label>
-          </div>
-          <div style="margin-top:8px;font-size:12px;opacity:.75">
-            Presets set video size + safe text area automatically (seller-ready).
-          </div>
-        </div>
-
-        </div>
-
-        <div style="margin-top:14px">
-          <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Template</h2>
-
-          <div id="tplRow" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-            <button class="tplBtn" data-tpl="sale" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
-              <div style="font-weight:700">Promo Sale</div>
-              <div style="font-size:12px;opacity:.8">Bold price + CTA</div>
-            </button>
-            <button class="tplBtn" data-tpl="new" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
-              <div style="font-weight:700">New Arrival</div>
-              <div style="font-size:12px;opacity:.8">Launch style</div>
-            </button>
-            <button class="tplBtn" data-tpl="brand" style="text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:white;cursor:pointer">
-              <div style="font-weight:700">Simple Brand</div>
-              <div style="font-size:12px;opacity:.8">Clean & minimal</div>
-            </button>
-          </div>
-
-          <div style="margin-top:10px;font-size:12px;opacity:.75">
-            Default output: <b>9:16</b> vertical, <b>5 slides</b>, modern clean style.
-          </div>
-        </div>
-
-        <div style="margin-top:14px">
-          <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Images</h2>
-          <div style="font-size:12px;opacity:.75;margin-bottom:8px">
-            Upload product photos (optional). If you skip, we use built‑in backgrounds.
-          </div>
-          <input id="imgInput" type="file" accept="image/*" multiple />
-          <div id="imgCount" style="margin-top:8px;font-size:12px;opacity:.8">0 images selected</div>
-        </div>
-
-        
-        <!-- Stage 1C: Music + Beat Sync -->
-        <div style="margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(0,0,0,.18)">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-              <input type="checkbox" id="musicToggle" checked />
-              <span style="font-size:13px;opacity:.9">Music ON</span>
-            </label>
-
-            <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-              <input type="checkbox" id="beatToggle" checked />
-              <span style="font-size:13px;opacity:.9">Beat sync transitions</span>
-            </label>
-
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">Music style</div>
-              <select id="musicStyle" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:white;outline:none">
-                <option value="chill">Chill (90 BPM)</option>
-                <option value="upbeat" selected>Upbeat (120 BPM)</option>
-                <option value="cinematic">Cinematic (100 BPM)</option>
-              </select>
-            </label>
-
-            <label style="display:block">
-              <div style="font-size:13px;opacity:.85;margin-bottom:6px">Volume</div>
-              <input id="musicVol" type="range" min="0" max="100" value="35" style="width:100%" />
-              <div style="font-size:12px;opacity:.7;margin-top:4px">Tip: 25–40 is nice for ads.</div>
-            </label>
-          </div>
-          <div style="margin-top:8px;font-size:12px;opacity:.75">
-            Music is generated in-browser (no third‑party cost). Export stays WEBM.
-          </div>
-        </div>
-
-
-        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
-          <button id="genBtn" style="padding:12px 14px;border-radius:12px;border:0;background:white;color:#0b0b0f;font-weight:800;cursor:pointer">
-            Generate video (1 click)
-          </button>
-          <button id="regenBtn" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:transparent;color:white;font-weight:700;cursor:pointer">
-            Regenerate
-          </button>
-          <span id="genHint" style="font-size:12px;opacity:.75"></span>
-        </div>
-
-        <div id="progressWrap" style="display:none;margin-top:12px">
-          <div style="font-size:12px;opacity:.75;margin-bottom:6px">Generating…</div>
-          <div style="height:10px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden">
-            <div id="progressBar" style="height:100%;width:0%;background:white;border-radius:999px"></div>
-          </div>
-        </div>
-
-        <div id="downloadWrap" style="display:none;margin-top:14px">
-          <a id="downloadLink" download="promo-video.webm"
-             style="display:inline-block;padding:12px 14px;border-radius:12px;border:0;background:#9ecbff;color:#0b0b0f;font-weight:800;text-decoration:none">
-            Download video
-          </a>
-          <div style="margin-top:8px;font-size:12px;opacity:.75">
-            Export format: <b>WEBM</b> (fast, browser-generated). If you need MP4, we can add server-side conversion later.
-          </div>
-        </div>
-      </div>
-
-      <div style="padding:14px;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.03)">
-        <h2 style="margin:0 0 10px 0;font-size:16px;opacity:.95">Preview</h2>
-        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
-          <canvas id="previewCanvas" width="720" height="1280" style="width:210px;height:374px;border-radius:16px;border:1px solid rgba(255,255,255,.15);background:#111"></canvas>
-          <div style="flex:1;min-width:170px">
-            <div style="font-size:12px;opacity:.75;line-height:1.5">
-              <div><b>Tip:</b> Upload 3–5 product images for best results.</div>
-              <div style="margin-top:6px"><b>Next upgrade:</b> template packs + logo watermark + auto-captions.</div>
-            </div>
-            <div id="supportNote" style="margin-top:12px;font-size:12px;opacity:.7">
-              If download button doesn’t appear, your browser may not support video recording. Try Chrome desktop.
-            </div>
-          </div>
-        </div>
-
-        <video id="previewVideo" controls playsinline style="display:none;margin-top:12px;width:100%;border-radius:16px;border:1px solid rgba(255,255,255,.15)"></video>
-      </div>
-    </div>
-  </div>
-<script>
-    // Simple SPA routing (works with vercel.json rewrite)
-    (function () {
-      var p = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
-      var isCreate = (p === "/create-video");
-
-      var paymentView = document.getElementById("paymentView");
-      var createView = document.getElementById("createView");
-
-      if (paymentView) paymentView.style.display = isCreate ? "none" : "block";
-      if (createView) createView.style.display = isCreate ? "block" : "none";
-
-      if (isCreate) {
-        var paid = (sessionStorage.getItem("uvm_paid") === "1");
-        var el = document.getElementById("createStatus");
-        if (el) {
-          el.textContent = paid
-            ? "Payment verified (local session) ✅ Redirect successful."
-            : "Not verified. Please complete payment first, then you will be redirected here.";
-        }
-      }
-    })();
-  </script>
-
-  <!-- Keep the same file that handles Pi init + sign-in + payment -->
-
-  <script>
-    // Stage 1C: NO‑AI seller video generator — presets + CTA + logo + MUSIC + beat‑sync (Pi auth/payment untouched)
-    (function () {
-      const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
-      if (path !== "/create-video") return;
-
-      const paidBadge = document.getElementById("paidBadge");
-      try {
-        const paid = (sessionStorage.getItem("uvm_paid") === "1");
-        if (paidBadge) paidBadge.textContent = paid ? "Paid access: unlocked ✅" : "Paid access: unknown";
-      } catch (_) {}
-
-      const els = {
-        canvas: document.getElementById("previewCanvas"),
-        video: document.getElementById("previewVideo"),
-        name: document.getElementById("pName"),
-        price: document.getElementById("pPrice"),
-        promo: document.getElementById("pPromo"),
-        preset: document.getElementById("presetSel"),
-        category: document.getElementById("catSel"),
-        cta: document.getElementById("ctaSel"),
-        imgInput: document.getElementById("imgInput"),
-        imgCount: document.getElementById("imgCount"),
-        logoInput: document.getElementById("logoInput"),
-        logoToggle: document.getElementById("logoToggle"),
-        logoCorner: document.getElementById("logoCorner"),
-
-        musicToggle: document.getElementById("musicToggle"),
-        beatToggle: document.getElementById("beatToggle"),
-        musicStyle: document.getElementById("musicStyle"),
-        musicVol: document.getElementById("musicVol"),
-
-        genBtn: document.getElementById("genBtn"),
-        regenBtn: document.getElementById("regenBtn"),
-        hint: document.getElementById("genHint"),
-        progressWrap: document.getElementById("progressWrap"),
-        progressBar: document.getElementById("progressBar"),
-        downloadWrap: document.getElementById("downloadWrap"),
-        downloadLink: document.getElementById("downloadLink"),
-        tplBtns: Array.from(document.querySelectorAll(".tplBtn")),
-      };
-      if (!els.canvas || !els.genBtn) return;
-
-      const ctx = els.canvas.getContext("2d");
-
-      
-      // --- Export capability checks (important for iOS Pi Browser / WKWebView) ---
-      function pickSupportedMimeType() {
-        if (!window.MediaRecorder || !window.MediaRecorder.isTypeSupported) return null;
-        const candidates = [
-          "video/webm;codecs=vp9,opus",
-          "video/webm;codecs=vp8,opus",
-          "video/webm;codecs=vp9",
-          "video/webm;codecs=vp8",
-          "video/webm"
-        ];
-        for (const t of candidates) {
-          try { if (MediaRecorder.isTypeSupported(t)) return t; } catch (e) {}
-        }
-        return null;
-      }
-
-      function canExportVideo() {
-        const hasCaptureStream = !!(els.canvas && els.canvas.captureStream);
-        const hasMR = !!window.MediaRecorder;
-        const mime = pickSupportedMimeType();
-        return hasCaptureStream && hasMR && !!mime;
-      }
-
-      function showExportNotSupported() {
-        setStatus(
-          "⚠️ Video export not supported on this browser.\n\n" +
-          "On iPhone/iPad, Pi Browser uses iOS WebView which often cannot export WEBM.\n" +
-          "✅ Solution: try Android Pi Browser or Chrome/Edge on PC.\n\n" +
-          "Tip: You can still preview the slides on this screen."
-        );
-      }
-
-      function startPreviewPlayback(slides, imgs, transitionSeconds, slideSeconds) {
-        // Lightweight preview loop (no recording). Renders to canvas for ~10s and stops.
-        let start = performance.now();
-        const total = Math.min(10, slides.length * slideSeconds);
-        function frame(now) {
-          const t = (now - start) / 1000;
-          const idx = Math.min(slides.length - 1, Math.floor(t / slideSeconds));
-          const localT = t - idx * slideSeconds;
-          try {
-            // rand is optional; if your build defines rand in generate, fallback to Math.random
-            const r = (typeof rand !== "undefined") ? rand : Math.random;
-            drawFrame(slides[idx], localT, t, imgs[idx], transitionSeconds, slideSeconds, r);
-          } catch (e) {}
-          if (t < total) requestAnimationFrame(frame);
-        }
-        requestAnimationFrame(frame);
-      }
-const PRESETS = {
-        tiktok: { w: 720, h: 1280 },
-        square: { w: 1080, h: 1080 },
-        youtube: { w: 1280, h: 720 },
-      };
-
-      const DEFAULTS = { tpl: "sale", slides: 5, fps: 30, slideSeconds: 1.4, transitionSeconds: 0.25 };
-
-      const CAT_BG = {
-        general: [["#0b0b0f","#1d2b64"],["#0b0b0f","#1fa2ff"],["#0b0b0f","#3a1c71"]],
-        watch: [["#0b0b0f","#3b3b98"],["#0b0b0f","#b33939"],["#0b0b0f","#0f4c75"]],
-        beauty: [["#0b0b0f","#ff6a88"],["#0b0b0f","#a044ff"],["#0b0b0f","#fcb045"]],
-        home: [["#0b0b0f","#11998e"],["#0b0b0f","#38ef7d"],["#0b0b0f","#00c6ff"]],
-        gadget: [["#0b0b0f","#00d2ff"],["#0b0b0f","#3a7bd5"],["#0b0b0f","#7f00ff"]],
-        fashion: [["#0b0b0f","#ee0979"],["#0b0b0f","#ff6a00"],["#0b0b0f","#4568dc"]],
-      };
-
-      const CTA_TEXT = {
-        shop: "Tap to Shop Now →",
-        checkout: "Checkout Now →",
-        voucher: "Claim Voucher →",
-        freeship: "Free Shipping →",
-        limited: "Limited Stock →",
-      };
-
-      const MUSIC = {
-        chill: { bpm: 90 },
-        upbeat: { bpm: 120 },
-        cinematic: { bpm: 100 },
-      };
-
-      let chosenTpl = DEFAULTS.tpl;
-      let uploadedImages = [];
-      let logoBmp = null;
-
-      function setCanvasPreset() {
-        const key = (els.preset && els.preset.value) ? els.preset.value : "tiktok";
-        const p = PRESETS[key] || PRESETS.tiktok;
-        els.canvas.width = p.w;
-        els.canvas.height = p.h;
-        els.canvas.style.width = "210px";
-        els.canvas.style.height = (210 * (p.h / p.w)) + "px";
-      }
-
-      function refreshTplUI() {
-        els.tplBtns.forEach(btn => {
-          const active = btn.dataset.tpl === chosenTpl;
-          btn.style.outline = active ? "2px solid #9ecbff" : "none";
-          btn.style.background = active ? "rgba(158,203,255,.18)" : "rgba(0,0,0,.25)";
-        });
-      }
-      els.tplBtns.forEach(btn => btn.addEventListener("click", () => {
-        chosenTpl = btn.dataset.tpl;
-        refreshTplUI();
-        drawPoster();
-      }));
-      refreshTplUI();
-
-      async function readUploads(files) {
-        uploadedImages = [];
-        const arr = Array.from(files || []).slice(0, 10);
-        for (const f of arr) {
-          try { uploadedImages.push(await createImageBitmap(f)); } catch (_) {}
-        }
-        if (els.imgCount) els.imgCount.textContent = `${uploadedImages.length} images selected`;
-        drawPoster();
-      }
-
-      async function readLogo(file) {
-        logoBmp = null;
-        if (!file) return drawPoster();
-        try { logoBmp = await createImageBitmap(file); } catch (_) { logoBmp = null; }
-        drawPoster();
-      }
-
-      if (els.imgInput) els.imgInput.addEventListener("change", (e) => readUploads(e.target.files));
-      if (els.logoInput) els.logoInput.addEventListener("change", (e) => readLogo((e.target.files && e.target.files[0]) || null));
-
-      const rerenderEvents = ["change", "input"];
-      for (const evt of rerenderEvents) {
-        if (els.preset) els.preset.addEventListener(evt, () => { setCanvasPreset(); drawPoster(); });
-        if (els.category) els.category.addEventListener(evt, drawPoster);
-        if (els.cta) els.cta.addEventListener(evt, drawPoster);
-        if (els.logoToggle) els.logoToggle.addEventListener(evt, drawPoster);
-        if (els.logoCorner) els.logoCorner.addEventListener(evt, drawPoster);
-        if (els.name) els.name.addEventListener(evt, drawPoster);
-        if (els.price) els.price.addEventListener(evt, drawPoster);
-        if (els.promo) els.promo.addEventListener(evt, drawPoster);
-      }
-
-      function lerp(a,b,t){ return a + (b-a)*t; }
-      function clamp(x,min,max){ return Math.max(min, Math.min(max, x)); }
-
-      function drawGradient(pair) {
-        const g = ctx.createLinearGradient(0, 0, 0, els.canvas.height);
-        g.addColorStop(0, pair[0]); g.addColorStop(1, pair[1]);
-        ctx.fillStyle = g;
-        ctx.fillRect(0,0,els.canvas.width,els.canvas.height);
-      }
-
-      function drawImageCover(img) {
-        const cw=els.canvas.width, ch=els.canvas.height;
-        const iw=img.width, ih=img.height;
-        const s=Math.max(cw/iw, ch/ih);
-        const w=iw*s, h=ih*s;
-        const x=(cw-w)/2, y=(ch-h)/2;
-        ctx.drawImage(img, x, y, w, h);
-        ctx.fillStyle="rgba(0,0,0,.28)";
-        ctx.fillRect(0,0,cw,ch);
-      }
-
-      function textShadow(){ ctx.shadowColor="rgba(0,0,0,.55)"; ctx.shadowBlur=18; ctx.shadowOffsetX=0; ctx.shadowOffsetY=8; }
-      function resetShadow(){ ctx.shadowColor="transparent"; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0; }
-      function roundRect(c,x,y,w,h,r){
-        const rr=Math.min(r,w/2,h/2);
-        c.beginPath();
-        c.moveTo(x+rr,y);
-        c.arcTo(x+w,y,x+w,y+h,rr);
-        c.arcTo(x+w,y+h,x,y+h,rr);
-        c.arcTo(x,y+h,x,y,rr);
-        c.arcTo(x,y,x+w,y,rr);
-        c.closePath();
-      }
-
-      function drawBadge(text,x,y,fontPx){
-        ctx.save();
-        ctx.font=`800 ${fontPx}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-        const padX=Math.round(fontPx*0.7);
-        const w=ctx.measureText(text).width + padX*2;
-        const h=Math.round(fontPx*1.7);
-        ctx.fillStyle="rgba(255,255,255,.92)";
-        roundRect(ctx,x,y,w,h,999); ctx.fill();
-        ctx.fillStyle="#0b0b0f";
-        ctx.fillText(text, x+padX, y+Math.round(fontPx*1.15));
-        ctx.restore();
-      }
-
-      function wrapText(text,x,y,lineH,maxW,font){
-        if (font) ctx.font = font;
-        const words = (text || "").split(" ");
-        let line = "", yy = y;
-        for (const w of words) {
-          const test = line ? (line + " " + w) : w;
-          if (ctx.measureText(test).width > maxW && line) {
-            ctx.fillText(line, x, yy);
-            line = w;
-            yy += lineH;
-          } else {
-            line = test;
-          }
-        }
-        if (line) ctx.fillText(line, x, yy);
-      }
-
-      function safeMargins(){
-        const w=els.canvas.width, h=els.canvas.height;
-        const pad = Math.round(Math.min(w,h)*0.06);
-        return { left: pad, right: pad, top: pad, bottom: pad };
-      }
-
-      function drawLogo(){
-        if (!logoBmp) return;
-        if (els.logoToggle && !els.logoToggle.checked) return;
-
-        const { left, right, top } = safeMargins();
-        const maxW = Math.round(els.canvas.width * 0.22);
-        const maxH = Math.round(els.canvas.height * 0.08);
-        const s = Math.min(maxW / logoBmp.width, maxH / logoBmp.height);
-        const w = Math.round(logoBmp.width * s);
-        const h = Math.round(logoBmp.height * s);
-
-        const topRight = (els.logoCorner ? els.logoCorner.checked : true);
-        const x = topRight ? (els.canvas.width - right - w) : left;
-        const y = top;
-
-        ctx.save();
-        ctx.fillStyle = "rgba(0,0,0,.25)";
-        roundRect(ctx, x-10, y-8, w+20, h+16, 14);
-        ctx.fill();
-        ctx.drawImage(logoBmp, x, y, w, h);
-        ctx.restore();
-      }
-
-      function buildScript(){
-        const title = (els.name && els.name.value ? els.name.value : "").trim() || "Product Name";
-        const price = (els.price && els.price.value ? els.price.value : "").trim() || "RM99";
-        const promo = (els.promo && els.promo.value ? els.promo.value : "").trim() || "Online Exclusive • Limited Stock";
-        const cat = (els.category && els.category.value) ? els.category.value : "general";
-
-        const hook = {
-          general: "Limited offer",
-          watch: "Premium timepiece",
-          beauty: "Glow up now",
-          home: "Home essential",
-          gadget: "Upgrade today",
-          fashion: "Style upgrade",
-        }[cat] || "Limited offer";
-
-        if (chosenTpl === "new") {
-          return [
-            { headline: "NEW ARRIVAL", title, price, promo: hook },
-            { headline: "WHY YOU'LL LOVE IT", title, price, promo: "Fast shipping • Easy returns" },
-            { headline: "LIMITED STOCK", title, price, promo },
-            { headline: "SPECIAL PRICE", title, price, promo },
-            { headline: "SHOP NOW", title, price, promo: "Tap to order today" },
-          ];
-        }
-        if (chosenTpl === "brand") {
-          return [
-            { headline: "MINIMAL. CLEAN.", title, price, promo: hook },
-            { headline: "DETAILS", title, price, promo: "Premium look • Comfortable" },
-            { headline: "ONLINE ONLY", title, price, promo },
-            { headline: "READY TO SHIP", title, price, promo: "Ships fast" },
-            { headline: "ORDER TODAY", title, price, promo: "Tap to shop now" },
-          ];
-        }
-        return [
-          { headline: "FLASH DEAL", title, price, promo: hook },
-          { headline: "ONLINE EXCLUSIVE", title, price, promo },
-          { headline: "BEST SELLER", title, price, promo: "Stocks moving fast" },
-          { headline: "GRAB IT NOW", title, price, promo: "Before price goes up" },
-          { headline: "CHECKOUT TODAY", title, price, promo: "Tap to shop now" },
-        ];
-      }
-
-      function pickBg(i){
-        const cat = (els.category && els.category.value) ? els.category.value : "general";
-        const arr = CAT_BG[cat] || CAT_BG.general;
-        return arr[i % arr.length];
-      }
-
-      function drawFrame(slide, t, totalT, img, transitionSeconds, slideSeconds){
-        if (img) drawImageCover(img);
-        else {
-          drawGradient(pickBg(slide.index));
-          ctx.fillStyle = "rgba(255,255,255,.04)";
-          for (let k=0; k<18; k++){
-            ctx.beginPath();
-            ctx.arc(
-              lerp(0, els.canvas.width, (k+1)/19),
-              lerp(120, els.canvas.height-120, (k%9)/9),
-              Math.round(Math.min(els.canvas.width, els.canvas.height)*0.03),
-              0, Math.PI*2
-            );
-            ctx.fill();
-          }
-        }
-
-        const { left, right, top, bottom } = safeMargins();
-        const pillH = Math.round(Math.min(els.canvas.height, els.canvas.width) * 0.09);
-        const pillY = top;
-        const pillW = els.canvas.width - left - right;
-
-        ctx.save();
-        ctx.fillStyle = "rgba(0,0,0,.35)";
-        roundRect(ctx, left, pillY, pillW, pillH, 18);
-        ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,.92)";
-        ctx.font = `900 ${Math.round(pillH*0.48)}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-        ctx.fillText(slide.headline, left + Math.round(pillH*0.32), pillY + Math.round(pillH*0.66));
-        ctx.restore();
-
-        const fade = clamp(t / transitionSeconds, 0, 1);
-        const endFade = clamp((slideSeconds - t) / transitionSeconds, 0, 1);
-        const opacity = Math.min(fade, endFade);
-        const phase = Math.sin((totalT / 0.6)) * 6;
-
-        const w = els.canvas.width, h = els.canvas.height;
-        const titlePx = Math.round(Math.min(w,h) * 0.07);
-        const promoPx = Math.round(Math.min(w,h) * 0.034);
-        const ctaPx = Math.round(Math.min(w,h) * 0.045);
-
-        ctx.save();
-        ctx.globalAlpha = opacity;
-
-        textShadow();
-        ctx.fillStyle = "rgba(255,255,255,.96)";
-        const maxW = w - left - right;
-        wrapText(slide.title, left, top + pillH + Math.round(h*0.08) + phase, Math.round(titlePx*1.12), maxW,
-                 `800 ${titlePx}px system-ui, -apple-system, Segoe UI, Roboto, Arial`);
-
-        resetShadow();
-        ctx.fillStyle = "rgba(255,255,255,.85)";
-        wrapText(slide.promo, left, top + pillH + Math.round(h*0.24) + phase, Math.round(promoPx*1.3), maxW,
-                 `600 ${promoPx}px system-ui, -apple-system, Segoe UI, Roboto, Arial`);
-
-        if (slide.price) {
-          ctx.save();
-          textShadow();
-          drawBadge(slide.price, left, h - bottom - Math.round(h*0.20), Math.round(Math.min(w,h)*0.05));
-          ctx.restore();
-        }
-
-        const ctaKey = (els.cta && els.cta.value) ? els.cta.value : "shop";
-        const ctaText = CTA_TEXT[ctaKey] || CTA_TEXT.shop;
-
-        ctx.save();
-        ctx.fillStyle = "rgba(255,255,255,.92)";
-        ctx.font = `900 ${ctaPx}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-        ctx.fillText(ctaText, left, h - bottom - Math.round(h*0.08));
-        ctx.restore();
-
-        ctx.restore();
-
-        drawLogo();
-      }
-
-      function drawPoster(){
-        setCanvasPreset();
-        const s = buildScript();
-        const first = { ...s[0], index: 0 };
-        const img = uploadedImages.length ? uploadedImages[0] : null;
-        drawFrame(first, 0.3, 0.3, img, DEFAULTS.transitionSeconds, DEFAULTS.slideSeconds);
-      }
-
-      function setProgress(on, pct){
-        if (!els.progressWrap || !els.progressBar) return;
-        els.progressWrap.style.display = on ? "block" : "none";
-        els.progressBar.style.width = `${pct || 0}%`;
-      }
-      function setHint(msg){ if (els.hint) els.hint.textContent = msg || ""; }
-
-      function getMusicSettings() {
-        const enabled = !!(els.musicToggle && els.musicToggle.checked);
-        const beatSync = !!(els.beatToggle && els.beatToggle.checked);
-        const styleKey = (els.musicStyle && els.musicStyle.value) ? els.musicStyle.value : "upbeat";
-        const bpm = (MUSIC[styleKey] ? MUSIC[styleKey].bpm : 120);
-        const vol = els.musicVol ? (Number(els.musicVol.value || 35) / 100) : 0.35;
-        return { enabled, beatSync, styleKey, bpm, vol };
-      }
-
-      function buildAudioTrack(ctxAudio, destination, durationSec, styleKey, volume) {
-        const master = ctxAudio.createGain();
-        master.gain.value = Math.max(0, Math.min(1, volume));
-        master.connect(destination);
-
-        const now = ctxAudio.currentTime;
-        const endAt = now + durationSec;
-
-        function tick(at, freq, gain) {
-          const o = ctxAudio.createOscillator();
-          const g = ctxAudio.createGain();
-          o.type = "sine";
-          o.frequency.setValueAtTime(freq, at);
-          o.frequency.exponentialRampToValueAtTime(Math.max(40, freq*0.6), at + 0.08);
-          g.gain.setValueAtTime(0.0001, at);
-          g.gain.exponentialRampToValueAtTime(gain, at + 0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
-          o.connect(g); g.connect(master);
-          o.start(at);
-          o.stop(at + 0.14);
-        }
-
-        function pad(at, freq, dur, gain) {
-          const o = ctxAudio.createOscillator();
-          const g = ctxAudio.createGain();
-          o.type = "triangle";
-          o.frequency.setValueAtTime(freq, at);
-          g.gain.setValueAtTime(0.0001, at);
-          g.gain.exponentialRampToValueAtTime(gain, at + 0.08);
-          g.gain.setValueAtTime(gain, at + Math.max(0.1, dur - 0.08));
-          g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-          o.connect(g); g.connect(master);
-          o.start(at);
-          o.stop(at + dur + 0.02);
-        }
-
-        const bpm = MUSIC[styleKey]?.bpm || 120;
-        const beat = 60 / bpm;
-
-        const style = {
-          chill: { kick: 0.22, pad: 0.10, base: 110 },
-          upbeat: { kick: 0.28, pad: 0.08, base: 130 },
-          cinematic: { kick: 0.24, pad: 0.12, base: 98 },
-        }[styleKey] || { kick: 0.26, pad: 0.09, base: 120 };
-
-        const prog = [0, 5, 3, 7];
-        const scale = [0, 2, 4, 7, 9];
-        const rootHz = style.base;
-
-        let t = now;
-        let bar = 0;
-        while (t < endAt) {
-          tick(t, 140, style.kick);
-          tick(t + 2*beat, 150, style.kick * 0.95);
-
-          const chord = prog[bar % prog.length];
-          const base = rootHz * Math.pow(2, chord/12);
-          pad(t, base, 4*beat, style.pad);
-          pad(t, base * Math.pow(2, 4/12), 4*beat, style.pad * 0.8);
-          pad(t, base * Math.pow(2, 7/12), 4*beat, style.pad * 0.7);
-
-          for (let i=0; i<4; i++) {
-            const note = scale[(bar + i) % scale.length];
-            const at = t + i*beat;
-            const o = ctxAudio.createOscillator();
-            const g = ctxAudio.createGain();
-            o.type = "sine";
-            o.frequency.setValueAtTime(rootHz * Math.pow(2, (chord + note)/12), at);
-            g.gain.setValueAtTime(0.0001, at);
-            g.gain.exponentialRampToValueAtTime(style.pad * 0.55, at + 0.01);
-            g.gain.exponentialRampToValueAtTime(0.0001, at + beat*0.5);
-            o.connect(g); g.connect(master);
-            o.start(at);
-            o.stop(at + beat*0.55);
-          }
-
-          t += 4*beat;
-          bar += 1;
-        }
-
-        return master;
-      }
-
-      function beatAligned(slidesLen, bpm) {
-        const beat = 60 / bpm;
-        const candidate = 4 * beat; // 4 beats per slide
-        const slideSeconds = Math.max(1.1, Math.min(2.2, candidate));
-        const transitionSeconds = Math.max(0.18, Math.min(0.30, slideSeconds * 0.18));
-        return { slideSeconds, transitionSeconds, totalSeconds: slidesLen * slideSeconds };
-      }
-
-      async function generateVideo(){
-        if (els.downloadWrap) els.downloadWrap.style.display = "none";
-        if (els.video) els.video.style.display = "none";
-
-        setHint("");
-        setProgress(true, 0);
-
-        setCanvasPreset();
-
-        const script = buildScript();
-        const slides = script.slice(0, DEFAULTS.slides).map((s,i)=>({ ...s, index:i }));
-        const imgs = slides.map((_,i)=> uploadedImages.length ? uploadedImages[i % uploadedImages.length] : null);
-
-        const music = getMusicSettings();
-        let slideSeconds = DEFAULTS.slideSeconds;
-        let transitionSeconds = DEFAULTS.transitionSeconds;
-        let totalSeconds = slides.length * slideSeconds;
-
-        if (music.beatSync) {
-          const aligned = beatAligned(slides.length, music.bpm);
-          slideSeconds = aligned.slideSeconds;
-          transitionSeconds = aligned.transitionSeconds;
-          totalSeconds = aligned.totalSeconds;
-        }
-
-        const canvasStream = els.canvas.captureStream(DEFAULTS.fps);
-
-        let mixedStream = canvasStream;
-        let audioCtx = null;
-
-        if (music.enabled) {
-          try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === "suspended") await audioCtx.resume();
-
-            const dest = audioCtx.createMediaStreamDestination();
-            buildAudioTrack(audioCtx, dest, totalSeconds, music.styleKey, music.vol);
-
-            mixedStream = new MediaStream([
-              ...canvasStream.getVideoTracks(),
-              ...dest.stream.getAudioTracks()
-            ]);
-          } catch (_) {
-            mixedStream = canvasStream; // fallback to video-only
-          }
-        }
-
-        const mimeCandidates = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
-        const mimeType = mimeCandidates.find(t => MediaRecorder.isTypeSupported(t)) || "video/webm";
-
-        const rec = new MediaRecorder(mixedStream, { mimeType });
-        const chunks = [];
-        rec.ondataavailable = (e)=>{ if (e.data && e.data.size > 0) chunks.push(e.data); };
-
-        const start = performance.now();
-        const stopPromise = new Promise((resolve)=>{ rec.onstop = () => resolve(); });
-
-        function tick(now){
-          const elapsed = (now - start) / 1000;
-          const pct = clamp((elapsed / totalSeconds) * 100, 0, 100);
-          setProgress(true, pct);
-
-          const idx = Math.min(slides.length - 1, Math.floor(elapsed / slideSeconds));
-          const localT = elapsed - idx * slideSeconds;
-
-          drawFrame(slides[idx], localT, elapsed, imgs[idx], transitionSeconds, slideSeconds);
-
-          if (elapsed < totalSeconds) requestAnimationFrame(tick);
-          else { try { rec.stop(); } catch (_) {} }
-        }
-
-        rec.start(200);
-        requestAnimationFrame(tick);
-        await stopPromise;
-
-        setProgress(false, 100);
-
-        if (audioCtx) { try { await audioCtx.close(); } catch (_) {} }
-
-        if (!chunks.length) { setHint("Your browser didn't produce video chunks. Try Chrome desktop."); return; }
-
-        const blob = new Blob(chunks, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-
-        if (els.video) { els.video.src = url; els.video.style.display = "block"; }
-        if (els.downloadLink) { els.downloadLink.href = url; els.downloadLink.download = "promo-video.webm"; }
-        if (els.downloadWrap) els.downloadWrap.style.display = "block";
-
-        setHint(music.enabled ? "Done ✅ Video + music exported." : "Done ✅ Download your video.");
-      }
-
-      function init(){
-        if (els.name && !els.name.value) els.name.value = "Product Name";
-        if (els.price && !els.price.value) els.price.value = "RM99";
-        if (els.promo && !els.promo.value) els.promo.value = "Online Exclusive • Limited Stock";
-        if (els.preset && !els.preset.value) els.preset.value = "tiktok";
-        if (els.category && !els.category.value) els.category.value = "general";
-        if (els.cta && !els.cta.value) els.cta.value = "shop";
-        if (els.musicStyle && !els.musicStyle.value) els.musicStyle.value = "upbeat";
-
-        setCanvasPreset();
-        drawPoster();
-
-        els.genBtn.addEventListener("click", generateVideo);
-        if (els.regenBtn) els.regenBtn.addEventListener("click", generateVideo);
-      }
-
-      init();
-    })();
-  </script>
-
+  <!-- Pi auth + payment (must stay) -->
   <script src="./pi-auth.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
