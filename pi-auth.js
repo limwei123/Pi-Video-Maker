@@ -1,9 +1,10 @@
 (function () {
-  // Only run Pi auth/payment logic on the payment page ("/")
-  // so the redirect page ("/create-video") doesn't break.
+  // Run Pi auth/payment logic on all pages EXCEPT the redirect page ("/create-video").
+  // In Pi Browser sandbox, the URL path may be "/app/<app-slug>", so we must not require "/".
   const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
-  const isPaymentPage = (path === "/");
-  if (!isPaymentPage) return;
+  const isRedirectPage = (path === "/create-video");
+  if (isRedirectPage) return;
+
 
   const statusEl = document.getElementById("status");
   const logEl = document.getElementById("log");
@@ -36,9 +37,12 @@
     // requirement #1: Pi SDK ready
     // requirement #2: Pi sign-in available
     // requirement #3: Pi payment available
+    const qs = new URLSearchParams(window.location.search || "");
+    const forced = (qs.get("pi_env") || qs.get("env") || "").toLowerCase();
     const isSandboxHost = /(^|\.)sandbox\.minepi\.com$/i.test(window.location.hostname);
-  window.__UVM_IS_SANDBOX = isSandboxHost;
-  Pi.init({ version: "2.0", sandbox: isSandboxHost });
+    const sandbox = (forced === "sandbox") ? true : (forced === "production" ? false : isSandboxHost);
+
+    Pi.init({ version: "2.0", sandbox });;
 
     signInBtn.disabled = false;
     payBtn.disabled = true;
@@ -69,7 +73,7 @@
     setStatus("Signing in…");
 
     try {
-      const auth = await withTimeout(Pi.authenticate(getAuthScopes(), () => {}), 15000, "Sign-in");
+      const auth = await Pi.authenticate(["username", "payments"], () => {});
       currentUsername = auth?.user?.username || null;
 
       userLine.textContent = "Signed in as: " + (currentUsername || "(unknown)");
@@ -163,15 +167,3 @@
 
   init();
 })();
-
-// --- Helpers for more reliable sandbox sign-in ---
-function getAuthScopes() {
-  return window.__UVM_IS_SANDBOX ? ["username"] : ["username", "payments"];
-}
-function withTimeout(promise, ms, label) {
-  let t;
-  const timeout = new Promise((_, reject) => {
-    t = setTimeout(() => reject(new Error((label || "Operation") + " timed out. Please try again.")), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(t));
-}
