@@ -19,6 +19,11 @@
   // Detect whether we are inside Pi Sandbox host
   const isSandboxHost = /(^|\.)sandbox\.minepi\.com$/i.test(window.location.hostname);
 
+  // Pi Sandbox URLs are usually under /app/<slug> (with or without a trailing slash).
+  // When the app is proxied, hostname might not be sandbox.minepi.com, so also detect by path.
+  const isSandboxPath = /^\/app\/[^\/]+(?:\/|$)/i.test(window.location.pathname || "/");
+  const isSandbox = isSandboxHost || isSandboxPath;
+
   // Build an app base path so redirects work both on:
   // - Vercel (base = "")
   // - Pi Sandbox (base = "/app/<slug>")
@@ -54,14 +59,14 @@
     // requirement #1: Pi SDK ready
     // requirement #2: Pi sign-in available
     // requirement #3: Pi payment available
-    Pi.init({ version: "2.0", sandbox: isSandboxHost });
+    Pi.init({ version: "2.0", sandbox: isSandbox });
 
     signInBtn.disabled = false;
     payBtn.disabled = true;
 
     setStatus("Pi SDK ready");
     log("Pi SDK ready");
-    log(isSandboxHost ? "Mode: SANDBOX" : "Mode: PRODUCTION");
+    log(isSandbox ? "Mode: SANDBOX" : "Mode: PRODUCTION");
   }
 
   async function checkPaid(username) {

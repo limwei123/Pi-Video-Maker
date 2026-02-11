@@ -1,6 +1,19 @@
 const PI_AUTH_SCRIPT_ID = "pi-auth-script";
 const e = React.createElement;
 
+// Compute base path for assets in Pi Sandbox (/app/<slug>) vs normal hosting (/)
+function __getAppBasePath() {
+  var p = window.location.pathname || "/";
+  var m = p.match(/^\/(app\/[^\/]+)(?:\/|$)/);
+  return m ? "/" + m[1] : "";
+}
+function __getAssetUrl(filename) {
+  var base = __getAppBasePath();
+  // Ensure trailing slash so "/app/<slug>" resolves to "/app/<slug>/filename"
+  return (base ? (base + "/") : "/") + filename;
+}
+
+
 function loadPiAuthScript() {
   if (document.getElementById(PI_AUTH_SCRIPT_ID)) {
     return;
@@ -8,7 +21,7 @@ function loadPiAuthScript() {
 
   const script = document.createElement("script");
   script.id = PI_AUTH_SCRIPT_ID;
-  script.src = "./pi-auth.js";
+  script.src = __getAssetUrl("pi-auth.js");
   script.async = true;
   document.body.appendChild(script);
 }
