@@ -1,21 +1,38 @@
 (function () {
-  // Run Pi auth/payment logic on all pages EXCEPT the redirect page ("/create-video").
-  // In Pi Browser sandbox, the URL path may be "/app/<app-slug>", so we must not require "/".
-  const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
-  const isRedirectPage = (path === "/create-video");
-  if (isRedirectPage) return;
-
-
+  // Runs on the payment screen wherever it is hosted:
+  // - Vercel production: https://pi-video-maker.vercel.app/
+  // - Pi Sandbox: https://sandbox.minepi.com/app/<app-slug>
+  //
+  // We detect the screen by DOM presence (buttons/status/log).
   const statusEl = document.getElementById("status");
   const logEl = document.getElementById("log");
   const signInBtn = document.getElementById("signinBtn");
   const payBtn = document.getElementById("payBtn");
   const userLine = document.getElementById("userLine");
 
-  // Extra guard: if required DOM is missing, do nothing.
+  // If required DOM is missing, this page isn't the payment screen.
   if (!statusEl || !logEl || !signInBtn || !payBtn || !userLine) return;
 
+  // Backend base (Pi payments backend on Vercel)
   const BACKEND = "https://pi-payments-backend.vercel.app";
+
+  // Detect whether we are inside Pi Sandbox host
+  const isSandboxHost = /(^|\.)sandbox\.minepi\.com$/i.test(window.location.hostname);
+
+  // Build an app base path so redirects work both on:
+  // - Vercel (base = "")
+  // - Pi Sandbox (base = "/app/<slug>")
+  function getAppBasePath() {
+    const p = window.location.pathname || "/";
+    const m = p.match(/^\/(app\/[^\/]+)(?:\/|$)/);
+    return m ? "/" + m[1] : "";
+  }
+
+  function redirectToCreate() {
+    const base = getAppBasePath();
+    const target = (base ? base : "") + "/create-video";
+    window.location.assign(target);
+  }
 
   let currentUsername = null;
 
@@ -37,18 +54,14 @@
     // requirement #1: Pi SDK ready
     // requirement #2: Pi sign-in available
     // requirement #3: Pi payment available
-    const qs = new URLSearchParams(window.location.search || "");
-    const forced = (qs.get("pi_env") || qs.get("env") || "").toLowerCase();
-    const isSandboxHost = /(^|\.)sandbox\.minepi\.com$/i.test(window.location.hostname);
-    const sandbox = (forced === "sandbox") ? true : (forced === "production" ? false : isSandboxHost);
-
-    Pi.init({ version: "2.0", sandbox });;
+    Pi.init({ version: "2.0", sandbox: isSandboxHost });
 
     signInBtn.disabled = false;
     payBtn.disabled = true;
 
     setStatus("Pi SDK ready");
     log("Pi SDK ready");
+    log(isSandboxHost ? "Mode: SANDBOX" : "Mode: PRODUCTION");
   }
 
   async function checkPaid(username) {
@@ -86,7 +99,7 @@
         if (paid) {
           setStatus("Already paid ✅ Redirecting…");
           sessionStorage.setItem("uvm_paid", "1");
-          window.location.assign("/create-video");
+          redirectToCreate();
           return;
         }
       }
@@ -141,7 +154,7 @@
 
             // Redirect AFTER successful completion
             sessionStorage.setItem("uvm_paid", "1");
-            window.location.assign("/create-video");
+            redirectToCreate();
           },
 
           onCancel: () => {
