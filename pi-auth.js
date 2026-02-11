@@ -86,7 +86,7 @@
         if (paid) {
           setStatus("Already paid ✅ Redirecting…");
           sessionStorage.setItem("uvm_paid", "1");
-          window.location.assign("/create-video");
+          window.location.assign(toCreateVideoPath());
           return;
         }
       }
@@ -141,7 +141,7 @@
 
             // Redirect AFTER successful completion
             sessionStorage.setItem("uvm_paid", "1");
-            window.location.assign("/create-video");
+            window.location.assign(toCreateVideoPath());
           },
 
           onCancel: () => {
@@ -166,4 +166,20 @@
   window.__piPayClick = pay;
 
   init();
-})();
+})()
+function getAppBasePath() {
+  const p = window.location.pathname || "/";
+  // If already on /.../create-video, strip it
+  if (p.endsWith("/create-video")) return p.slice(0, -"/create-video".length) || "";
+  // If running inside Pi Browser wrapper like /app/<app-slug>/...
+  const parts = p.split("/").filter(Boolean);
+  if (parts[0] === "app" && parts.length >= 2) return `/${parts[0]}/${parts[1]}`;
+  return "";
+}
+
+function toCreateVideoPath() {
+  const base = getAppBasePath();
+  return (base ? `${base}/create-video` : "/create-video");
+}
+
+;

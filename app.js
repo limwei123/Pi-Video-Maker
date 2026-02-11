@@ -67,11 +67,15 @@ function NotFoundPage() {
 function App() {
   const path = window.location.pathname;
 
-  if (path === "/") {
+  // Support running inside Pi Browser wrapper paths like /app/<app-name>/...
+  const normalized = (path.endsWith("/") && path.length > 1) ? path.slice(0, -1) : path;
+
+  if (normalized === "/" || normalized === "") {
     return e(PaymentPage);
   }
 
-  if (path === "/create-video") {
+  // Match both /create-video and /app/ultra-video-maker/create-video etc.
+  if (normalized.endsWith("/create-video")) {
     return e(CreateVideoPage);
   }
 
