@@ -19,10 +19,21 @@
   // Detect whether we are inside Pi Sandbox host
   const isSandboxHost = /(^|\.)sandbox\.minepi\.com$/i.test(window.location.hostname);
 
-  // Pi Sandbox URLs are usually under /app/<slug> (with or without a trailing slash).
-  // When the app is proxied, hostname might not be sandbox.minepi.com, so also detect by path.
+  // Pi Sandbox often embeds your hosted app (e.g., Vercel) in a wrapper/iframe.
+  // In that case, hostname is NOT sandbox.minepi.com, so also detect by:
+  // - document.referrer (wrapper origin)
+  // - ancestorOrigins (Chrome)
+  // - /app/<slug> path (if directly served under sandbox)
+  const ref = document.referrer || "";
+  const isSandboxReferrer = /(^|\/\/)sandbox\.minepi\.com(\/|$)/i.test(ref);
+
+  const ao = window.location.ancestorOrigins ? Array.from(window.location.ancestorOrigins) : [];
+  const isSandboxAncestor = ao.some((o) => /(^|\/\/)sandbox\.minepi\.com(\/|$)/i.test(String(o)));
+
   const isSandboxPath = /^\/app\/[^\/]+(?:\/|$)/i.test(window.location.pathname || "/");
-  const isSandbox = isSandboxHost || isSandboxPath;
+
+  const isSandbox = isSandboxHost || isSandboxReferrer || isSandboxAncestor || isSandboxPath;
+
 
   // Build an app base path so redirects work both on:
   // - Vercel (base = "")
